@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الثوابت | Souq app</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+        .hidden-element { display: none !important; }
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); }
+        /* زر الإضافة العائم */
+        .fab-button {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            z-index: 40;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex h-screen overflow-hidden">
+
+    <!-- القائمة الجانبية (Sidebar) -->
+    <aside class="w-64 bg-gray-900 text-white flex flex-col shrink-0 shadow-lg z-20">
+        <div class="h-16 flex items-center justify-center font-black text-2xl bg-gray-950 border-b border-gray-800">
+            Souq app
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+            <a href="dashboard.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">الرئيسية</a>
+            <a href="orders.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الطلبات</a>
+            <a href="reports.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">التقارير والإحصائيات</a>
+            <a href="ads.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الإعلانات</a>
+            <a href="trader.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة التجار</a>
+            <a href="clients.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">عملاء التطبيق</a>
+            <!-- الزر النشط الآن هو إدارة الثوابت -->
+            <a href="constant.html" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">إدارة الثوابت</a>
+        </nav>
+        <div class="p-4 border-t border-gray-800">
+            <button class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">
+                تسجيل الخروج
+            </button>
+        </div>
+    </aside>
+
+    <!-- منطقة المحتوى الرئيسية -->
+    <div class="flex-1 flex flex-col overflow-hidden relative">
+        
+        <header class="h-16 bg-[#0D1B6D] text-white shadow-sm flex items-center justify-between px-8 shrink-0 z-10">
+            <h2 class="text-xl font-bold">إدارة الثوابت (القوائم المنسدلة)</h2>
+            <div class="flex items-center gap-6">
+                <div class="bg-white/20 px-4 py-1.5 rounded-full font-bold text-sm">
+                    العناصر: <span id="total-count">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- التبويبات -->
+        <div class="flex bg-white px-4 border-b border-gray-200 sticky top-0 z-10 shadow-sm overflow-x-auto" id="tabsContainer">
+            <button id="btn-tab-category" onclick="switchTab('category')" class="px-6 py-4 font-bold border-b-4 border-[#0D1B6D] text-[#0D1B6D] transition-colors whitespace-nowrap">أقسام قطع الغيار</button>
+            <button id="btn-tab-brand" onclick="switchTab('brand')" class="px-6 py-4 font-bold border-b-4 border-transparent text-gray-500 hover:text-gray-800 transition-colors whitespace-nowrap">الماركات</button>
+            <button id="btn-tab-quality" onclick="switchTab('quality')" class="px-6 py-4 font-bold border-b-4 border-transparent text-gray-500 hover:text-gray-800 transition-colors whitespace-nowrap">أنواع الجودة</button>
+            <button id="btn-tab-location" onclick="switchTab('location')" class="px-6 py-4 font-bold border-b-4 border-transparent text-gray-500 hover:text-gray-800 transition-colors whitespace-nowrap">المحافظات</button>
+        </div>
+
+        <main class="flex-1 overflow-y-auto bg-gray-50 p-6 relative">
+            <!-- حاوية القائمة -->
+            <div id="listContainer" class="max-w-4xl mx-auto space-y-4 pb-24"></div>
+        </main>
+
+        <!-- زر الإضافة العائم -->
+        <button onclick="openFormModal()" class="fab-button w-14 h-14 bg-[#4CAF50] hover:bg-green-600 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105">
+            <i class="fas fa-plus text-xl"></i>
+        </button>
+    </div>
+
+    <!-- ======================= النوافذ المنبثقة (Modals) ======================= -->
+
+    <!-- نافذة إضافة / تعديل البيانات -->
+    <div id="form-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center bg-white rounded-t-2xl">
+                <h3 id="modal-title" class="text-xl font-bold text-[#0D1B6D]">إضافة جديدة</h3>
+                <button onclick="closeModal('form-modal')" class="text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="item-id">
+                
+                <div>
+                    <label id="lbl-name" class="block text-sm font-bold text-gray-700 mb-2">الاسم</label>
+                    <input type="text" id="item-name" class="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:border-[#0D1B6D] transition-colors shadow-sm">
+                </div>
+                
+                <!-- حقل مكان التصنيع (يظهر فقط في قسم الماركات) -->
+                <div id="spec-container" class="hidden-element">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">مكان التصنيع (اختياري)</label>
+                    <input type="text" id="item-spec" placeholder="مثال: اليابان مواصفات خليجي" class="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:border-[#0D1B6D] transition-colors shadow-sm">
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 rounded-b-2xl">
+                <button onclick="closeModal('form-modal')" class="px-6 py-2.5 text-gray-600 font-bold hover:bg-gray-200 rounded-lg transition-colors">إلغاء</button>
+                <button onclick="saveData()" class="px-8 py-2.5 bg-[#4CAF50] text-white font-bold rounded-lg shadow-md hover:bg-green-600 transition-colors">حفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة تأكيد الحذف -->
+    <div id="delete-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-triangle text-3xl text-red-600"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">تأكيد الحذف</h3>
+            <p class="text-gray-500 mb-6">هل أنت متأكد من رغبتك في حذف هذا العنصر نهائياً؟</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeModal('delete-modal')" class="flex-1 px-4 py-2 text-gray-600 font-bold bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">إلغاء</button>
+                <button id="confirm-delete-btn" class="flex-1 px-4 py-2 bg-red-600 text-white font-bold hover:bg-red-700 rounded-lg transition-colors">حذف</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- إشعار النجاح (Toast) -->
+    <div id="toast-message" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-[#4CAF50] text-white px-6 py-3 rounded-xl shadow-lg hidden-element transition-opacity z-50 flex items-center gap-3">
+        <i class="fas fa-check-circle text-xl"></i> <span id="toast-text" class="font-bold">تم الحفظ بنجاح</span>
+    </div>
+
+    <script>
+        // --- 1. البيانات الوهمية للمحاكاة ---
+        let currentTab = 'category';
+        let deleteTargetId = null;
+
+        let categories = [
+            { id: "C1", name: "محركات" },
+            { id: "C2", name: "أجزاء الهيكل" },
+            { id: "C3", name: "أنظمة التعليق" }
+        ];
+
+        let brands = [
+            { id: "B1", name: "تويوتا (Toyota)", spec: "اليابان مواصفات خليجي" },
+            { id: "B2", name: "نيسان (Nissan)", spec: "اليابان" },
+            { id: "B3", name: "هيونداي (Hyundai)", spec: "كوريا" }
+        ];
+
+        let qualities = [
+            { id: "Q1", name: "أصلي وكالة" },
+            { id: "Q2", name: "تجاري درجة أولى" },
+            { id: "Q3", name: "مستخدم (تشليح)" }
+        ];
+
+        let locations = [
+            { id: "L1", name: "صنعاء" },
+            { id: "L2", name: "عدن" },
+            { id: "L3", name: "تعز" },
+            { id: "L4", name: "حضرموت" }
+        ];
+
+        // --- 2. التحكم بالتبويبات ---
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // إعادة ضبط ألوان الأزرار
+            let tabsList = ['category', 'brand', 'quality', 'location'];
+            let activeClass = "border-[#0D1B6D] text-[#0D1B6D]";
+            let inactiveClass = "border-transparent text-gray-500 hover:text-gray-800";
+
+            for(let i=0; i<tabsList.length; i++) {
+                let btn = document.getElementById('btn-tab-' + tabsList[i]);
+                if(tabsList[i] === tab) {
+                    btn.className = "px-6 py-4 font-bold border-b-4 transition-colors whitespace-nowrap " + activeClass;
+                } else {
+                    btn.className = "px-6 py-4 font-bold border-b-4 transition-colors whitespace-nowrap " + inactiveClass;
+                }
+            }
+            
+            renderData();
+        }
+
+        // --- 3. رسم البيانات (بدون Template Literals لتجنب الأخطاء) ---
+        function renderData() {
+            let container = document.getElementById('listContainer');
+            let totalCountEl = document.getElementById('total-count');
+            
+            let dataArray = [];
+            let emptyMsg = "";
+
+            if(currentTab === 'category') { dataArray = categories; emptyMsg = "لا توجد أقسام مضافة"; }
+            else if(currentTab === 'brand') { dataArray = brands; emptyMsg = "لا توجد ماركات مضافة"; }
+            else if(currentTab === 'quality') { dataArray = qualities; emptyMsg = "لا توجد أنواع جودة مضافة"; }
+            else if(currentTab === 'location') { dataArray = locations; emptyMsg = "لا توجد محافظات مضافة"; }
+
+            let htmlStr = '';
+
+            if (dataArray.length === 0) {
+                htmlStr = '<div class="text-center py-20 text-gray-400"><i class="fas fa-folder-open text-6xl mb-4"></i><h3 class="text-xl font-bold">' + emptyMsg + '</h3></div>';
+            } else {
+                for (let i = 0; i < dataArray.length; i++) {
+                    let item = dataArray[i];
+                    htmlStr += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex justify-between items-center hover:shadow-md transition-shadow">';
+                    
+                    htmlStr += '<div class="flex-1">';
+                    htmlStr += '<h3 class="text-lg font-bold text-[#0D1B6D]">' + item.name + '</h3>';
+                    
+                    if(currentTab === 'brand' && item.spec) {
+                        htmlStr += '<div class="text-gray-500 text-sm mt-1">مكان التصنيع: ' + item.spec + '</div>';
+                    }
+                    htmlStr += '</div>';
+
+                    htmlStr += '<div class="flex gap-2">';
+                    htmlStr += '<button onclick="openFormModal(\'' + item.id + '\')" class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"><i class="fas fa-pen"></i></button>';
+                    htmlStr += '<button onclick="openDeleteModal(\'' + item.id + '\')" class="w-10 h-10 rounded-full bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors"><i class="fas fa-trash"></i></button>';
+                    htmlStr += '</div>';
+                    
+                    htmlStr += '</div>';
+                }
+            }
+
+            container.innerHTML = htmlStr;
+            totalCountEl.innerText = dataArray.length;
+        }
+
+        // --- 4. التحكم بالنوافذ المنبثقة (Modals) ---
+        function openModal(id) { document.getElementById(id).classList.remove('hidden-element'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden-element'); }
+
+        // نافذة الإضافة/التعديل
+        function openFormModal(id) {
+            let titleEl = document.getElementById('modal-title');
+            let idInput = document.getElementById('item-id');
+            let nameInput = document.getElementById('item-name');
+            let specInput = document.getElementById('item-spec');
+            let specContainer = document.getElementById('spec-container');
+
+            // إظهار/إخفاء حقل المواصفات (التصنيع) خاص بالماركات فقط
+            if(currentTab === 'brand') {
+                specContainer.classList.remove('hidden-element');
+            } else {
+                specContainer.classList.add('hidden-element');
+            }
+
+            if (id) {
+                // وضع التعديل
+                titleEl.innerText = "تعديل البيانات";
+                let dataArray = getActiveArray();
+                for(let i=0; i<dataArray.length; i++) {
+                    if(dataArray[i].id === id) {
+                        idInput.value = dataArray[i].id;
+                        nameInput.value = dataArray[i].name;
+                        specInput.value = dataArray[i].spec || "";
+                        break;
+                    }
+                }
+            } else {
+                // وضع الإضافة
+                titleEl.innerText = "إضافة جديدة";
+                idInput.value = "";
+                nameInput.value = "";
+                specInput.value = "";
+            }
+            
+            openModal('form-modal');
+        }
+
+        function getActiveArray() {
+            if(currentTab === 'category') return categories;
+            if(currentTab === 'brand') return brands;
+            if(currentTab === 'quality') return qualities;
+            if(currentTab === 'location') return locations;
+            return [];
+        }
+
+        // حفظ البيانات
+        function saveData() {
+            let id = document.getElementById('item-id').value;
+            let name = document.getElementById('item-name').value.trim();
+            let spec = document.getElementById('item-spec').value.trim();
+
+            if(!name) {
+                alert("يرجى إدخال الاسم");
+                return;
+            }
+
+            let newItem = { id: id || currentTab.charAt(0).toUpperCase() + Date.now(), name: name };
+            if(currentTab === 'brand') { newItem.spec = spec; }
+
+            let dataArray = getActiveArray();
+
+            if (id) {
+                // تحديث
+                for (let i = 0; i < dataArray.length; i++) {
+                    if (dataArray[i].id === id) {
+                        dataArray[i] = newItem;
+                        break;
+                    }
+                }
+            } else {
+                // إضافة
+                dataArray.push(newItem);
+            }
+
+            closeModal('form-modal');
+            renderData();
+            showToast("تم الحفظ بنجاح");
+        }
+
+        // نافذة الحذف
+        function openDeleteModal(id) {
+            deleteTargetId = id;
+            document.getElementById('confirm-delete-btn').onclick = executeDelete;
+            openModal('delete-modal');
+        }
+
+        function executeDelete() {
+            let dataArray = getActiveArray();
+            for (let i = 0; i < dataArray.length; i++) {
+                if (dataArray[i].id === deleteTargetId) {
+                    dataArray.splice(i, 1);
+                    break;
+                }
+            }
+            closeModal('delete-modal');
+            renderData();
+            showToast("تم الحذف بنجاح");
+        }
+
+        // إشعار التنبيه الصغير (Toast)
+        function showToast(message) {
+            let toast = document.getElementById('toast-message');
+            document.getElementById('toast-text').innerText = message;
+            toast.classList.remove('hidden-element');
+            setTimeout(function() {
+                toast.classList.add('hidden-element');
+            }, 3000);
+        }
+
+        // التهيئة الأولى عند تحميل الصفحة
+        window.onload = function() {
+            switchTab('category');
+        };
+    </script>
+</body>
+</html>
