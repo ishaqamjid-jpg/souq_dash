@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عملاء التطبيق | Souq app</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+        .hidden-element { display: none !important; }
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); }
+        .client-details { display: none; }
+        .client-details.open { display: block; }
+        /* زر الإضافة العائم */
+        .fab-button {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            z-index: 40;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex h-screen overflow-hidden">
+
+    <!-- القائمة الجانبية (Sidebar) -->
+    <aside class="w-64 bg-gray-900 text-white flex flex-col shrink-0 shadow-lg z-20">
+        <div class="h-16 flex items-center justify-center font-black text-2xl bg-gray-950 border-b border-gray-800">
+            Souq app
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <a href="dashboard.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">الرئيسية</a>
+            <a href="orders.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الطلبات</a>
+            <a href="reports.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">التقارير والإحصائيات</a>
+            <a href="ads.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الإعلانات</a>
+            <a href="trader.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة التجار</a>
+            <!-- الزر النشط الآن هو العملاء -->
+            <a href="clients.html" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">عملاء التطبيق</a>
+        </nav>
+        <div class="p-4 border-t border-gray-800">
+            <button class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">
+                تسجيل الخروج
+            </button>
+        </div>
+    </aside>
+
+    <!-- منطقة المحتوى الرئيسية -->
+    <div class="flex-1 flex flex-col overflow-hidden relative">
+        
+        <header class="h-16 bg-[#0D1B6D] text-white shadow-sm flex items-center justify-between px-8 shrink-0 z-10">
+            <h2 class="text-xl font-bold">عملاء التطبيق</h2>
+            <div class="flex items-center gap-6">
+                <button onclick="renderClients()" class="text-white hover:text-gray-200 font-bold transition flex items-center gap-2">
+                    <i class="fas fa-sync-alt"></i> تحديث
+                </button>
+                <div class="bg-white/20 px-4 py-1.5 rounded-full font-bold text-sm">
+                    الإجمالي: <span id="total-count">0</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto bg-gray-50 p-6 relative">
+            
+            <!-- شريط البحث -->
+            <div class="max-w-7xl mx-auto mb-6 relative">
+                <i class="fas fa-search absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="tel" id="search-input" onkeyup="renderClients()" placeholder="ابحث برقم الهاتف..." class="w-full bg-white border border-gray-200 text-gray-900 rounded-xl shadow-sm focus:ring-[#0D1B6D] focus:border-[#0D1B6D] block pr-12 p-3.5 outline-none transition-colors text-left" dir="ltr">
+                <button id="clear-search" onclick="clearSearch()" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 hidden-element transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- حاوية بطاقات العملاء -->
+            <div id="clientsContainer" class="max-w-7xl mx-auto space-y-4 pb-24"></div>
+
+        </main>
+
+        <!-- زر الإضافة العائم -->
+        <button onclick="openAddModal()" class="fab-button w-14 h-14 bg-[#0D1B6D] hover:bg-blue-900 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105">
+            <i class="fas fa-plus text-xl"></i>
+        </button>
+    </div>
+
+    <!-- ======================= النوافذ المنبثقة (Modals) ======================= -->
+
+    <!-- نافذة إضافة عميل جديد -->
+    <div id="add-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto flex flex-col">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
+                <h3 class="text-xl font-bold text-[#0D1B6D]">إضافة عميل جديد</h3>
+                <button onclick="closeModal('add-modal')" class="text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">نوع العميل:</label>
+                    <div class="flex gap-6 mb-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="add-type" value="فرد" checked onchange="toggleAddCommercialFields(false)" class="w-4 h-4 text-[#0D1B6D]">
+                            <span class="font-bold">فرد</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="add-type" value="تجاري" onchange="toggleAddCommercialFields(true)" class="w-4 h-4 text-[#0D1B6D]">
+                            <span class="font-bold">تجاري</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label id="lbl-add-name" class="block text-sm font-bold text-gray-700 mb-1">اسم العميل</label>
+                    <input type="text" id="add-name" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#0D1B6D]">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">رقم الهاتف</label>
+                    <input type="tel" id="add-phone" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#0D1B6D] text-left" dir="ltr" placeholder="777XXXXXX">
+                </div>
+                
+                <!-- الحقول التجارية (مخفية افتراضياً) -->
+                <div id="add-commercial-fields" class="hidden-element space-y-4 border-t border-gray-100 pt-4 mt-2">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">الاسم التجاري (مثل: ورشة الخامري)</label>
+                        <input type="text" id="add-trade-name" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#0D1B6D]">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">صورة السجل التجاري / الوثيقة:</label>
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer" onclick="document.getElementById('add-file').click()">
+                            <input type="file" id="add-file" class="hidden" accept="image/*,.pdf">
+                            <i class="fas fa-file-upload text-3xl text-gray-400 mb-2"></i>
+                            <p class="text-sm text-gray-500">اضغط لرفع ملف أو صورة</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">رقم الوثيقة الحكومية</label>
+                        <input type="text" id="add-trade-number" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#0D1B6D]">
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-100 pt-4 mt-2">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">العنوان</label>
+                    <input type="text" id="add-location" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#0D1B6D]">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">الحالة (active / not_active)</label>
+                    <input type="text" id="add-status" value="active" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#0D1B6D]" dir="ltr">
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 rounded-b-2xl sticky bottom-0">
+                <button onclick="closeModal('add-modal')" class="px-6 py-2.5 text-gray-600 font-bold hover:bg-gray-200 rounded-lg transition-colors">إلغاء</button>
+                <button onclick="saveNewClient()" class="px-8 py-2.5 bg-[#0D1B6D] text-white font-bold rounded-lg shadow-md hover:bg-blue-900 transition-colors">إضافة العميل</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة تأكيد الحذف -->
+    <div id="delete-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-triangle text-3xl text-red-600"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">تأكيد الحذف</h3>
+            <p class="text-gray-500 mb-6" id="delete-message">هل أنت متأكد أنك تريد حذف هذا العميل نهائياً؟</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeModal('delete-modal')" class="flex-1 px-4 py-2 text-gray-600 font-bold bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">إلغاء</button>
+                <button id="confirm-delete-btn" class="flex-1 px-4 py-2 bg-red-600 text-white font-bold hover:bg-red-700 rounded-lg transition-colors">حذف</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- إشعار النجاح (Toast) -->
+    <div id="toast-message" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-[#4CAF50] text-white px-6 py-3 rounded-xl shadow-lg hidden-element transition-opacity z-50 flex items-center gap-3">
+        <i class="fas fa-check-circle text-xl"></i> <span id="toast-text" class="font-bold">تمت العملية بنجاح</span>
+    </div>
+
+    <script>
+        // --- 1. البيانات الوهمية للمحاكاة ---
+        let clientsData = [
+            { 
+                user_id: "USR-1", display_name: "أحمد محمد", phone_number: "777123456", type: "فرد", 
+                trade_name: "", trade_number: "", location: "صنعاء - حدة", 
+                status: "active", number_of_rejections: 0, banned_status: false, 
+                fcm_token: "token_abc123", commercial_document_image: "", created_at: "2023-10-01" 
+            },
+            { 
+                user_id: "USR-2", display_name: "خالد عبدالله", phone_number: "711987654", type: "تجاري", 
+                trade_name: "ورشة السعادة", trade_number: "REG-9988", location: "عدن - المعلا", 
+                status: "active", number_of_rejections: 1, banned_status: false, 
+                fcm_token: "token_xyz987", commercial_document_image: "https://via.placeholder.com/300x200?text=Document", created_at: "2023-10-15" 
+            },
+            { 
+                user_id: "USR-3", display_name: "سعيد علي", phone_number: "733445566", type: "فرد", 
+                trade_name: "", trade_number: "", location: "تعز - الحوبان", 
+                status: "not_active", number_of_rejections: 5, banned_status: true, banned_date: "2023-11-01",
+                fcm_token: "token_def456", commercial_document_image: "", created_at: "2023-09-20" 
+            }
+        ];
+
+        let clientToDeleteId = null;
+
+        // --- 2. رسم بيانات العملاء ---
+        function renderClients() {
+            let container = document.getElementById('clientsContainer');
+            let query = document.getElementById('search-input').value.toLowerCase();
+            let clearBtn = document.getElementById('clear-search');
+            let totalCountEl = document.getElementById('total-count');
+            
+            if(query.length > 0) clearBtn.classList.remove('hidden-element');
+            else clearBtn.classList.add('hidden-element');
+
+            let htmlStr = '';
+            let count = 0;
+
+            for (let i = 0; i < clientsData.length; i++) {
+                let c = clientsData[i];
+                if (query && !c.phone_number.includes(query)) continue;
+                
+                count++;
+                
+                let titleText = (c.type === 'تجاري' && c.trade_name) ? (c.trade_name + ' (' + c.display_name + ')') : c.display_name;
+                let isActive = c.status === 'active';
+                let statusColor = isActive ? 'text-[#4CAF50]' : 'text-red-600';
+                let statusText = isActive ? 'الحالة: نشط' : 'الحالة: غير نشط';
+                let blockIcon = isActive ? 'fa-ban' : 'fa-check-circle';
+                let blockColor = isActive ? 'text-red-500 hover:bg-red-100' : 'text-[#4CAF50] hover:bg-green-100';
+
+                htmlStr += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow mb-4">';
+                
+                // --- رأس البطاقة (الملخص) ---
+                htmlStr += '<div class="p-5 cursor-pointer flex justify-between items-center" onclick="toggleDetails(\'' + c.user_id + '\')">';
+                htmlStr += '<div class="flex-1">';
+                htmlStr += '<h3 class="text-lg font-bold text-gray-900 mb-1">' + titleText + '</h3>';
+                htmlStr += '<div class="text-gray-600 text-sm mb-1">رقم الهاتف: <span dir="ltr" class="font-bold">' + c.phone_number + '</span></div>';
+                htmlStr += '<div class="text-gray-500 text-xs mb-2">النوع: ' + c.type + '</div>';
+                
+                if (c.banned_status) {
+                    htmlStr += '<div class="text-red-600 font-bold text-xs bg-red-50 inline-block px-2 py-1 rounded">محظور بسبب الرفض المتكرر</div>';
+                } else {
+                    htmlStr += '<div class="' + statusColor + ' font-bold text-sm">' + statusText + '</div>';
+                }
+                htmlStr += '</div>';
+
+                htmlStr += '<div class="flex items-center gap-1" onclick="event.stopPropagation()">';
+                htmlStr += '<button onclick="openDeleteModal(\'' + c.user_id + '\', \'' + c.display_name + '\')" class="w-10 h-10 rounded-full text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors"><i class="fas fa-trash"></i></button>';
+                htmlStr += '<button onclick="toggleClientStatus(\'' + c.user_id + '\')" class="w-10 h-10 rounded-full ' + blockColor + ' flex items-center justify-center transition-colors"><i class="fas ' + blockIcon + '"></i></button>';
+                htmlStr += '<div class="w-10 h-10 rounded-full text-gray-400 flex items-center justify-center" onclick="toggleDetails(\'' + c.user_id + '\')"><i id="icon-' + c.user_id + '" class="fas fa-chevron-down"></i></div>';
+                htmlStr += '</div>';
+                htmlStr += '</div>';
+
+                // --- تفاصيل البطاقة (النموذج القابل للتعديل) ---
+                htmlStr += '<div id="details-' + c.user_id + '" class="client-details border-t border-gray-100 bg-gray-50 p-5">';
+                
+                // أزرار الراديو للنوع
+                htmlStr += '<div class="mb-4"><label class="block text-sm font-bold text-gray-700 mb-2">نوع العميل:</label>';
+                htmlStr += '<div class="flex gap-6">';
+                let checkInd = c.type === 'فرد' ? 'checked' : '';
+                let checkCom = c.type === 'تجاري' ? 'checked' : '';
+                htmlStr += '<label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="type-' + c.user_id + '" value="فرد" ' + checkInd + ' onchange="toggleEditCommercial(\'' + c.user_id + '\', false)" class="w-4 h-4 text-[#0D1B6D]"><span>فرد</span></label>';
+                htmlStr += '<label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="type-' + c.user_id + '" value="تجاري" ' + checkCom + ' onchange="toggleEditCommercial(\'' + c.user_id + '\', true)" class="w-4 h-4 text-[#0D1B6D]"><span>تجاري</span></label>';
+                htmlStr += '</div></div>';
+
+                htmlStr += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">';
+                htmlStr += '<div><label class="block text-xs font-bold text-gray-600 mb-1">اسم العميل/المالك</label><input type="text" id="edit-name-' + c.user_id + '" value="' + c.display_name + '" class="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-[#0D1B6D]"></div>';
+                htmlStr += '<div><label class="block text-xs font-bold text-gray-600 mb-1">رقم الهاتف</label><input type="tel" id="edit-phone-' + c.user_id + '" value="' + c.phone_number + '" dir="ltr" class="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-[#0D1B6D] text-left"></div>';
+                htmlStr += '</div>';
+
+                // الحقول التجارية
+                let commDisplay = c.type === 'تجاري' ? 'block' : 'none';
+                htmlStr += '<div id="comm-fields-' + c.user_id + '" style="display:' + commDisplay + ';" class="mb-4 space-y-4 border-t border-gray-200 pt-4">';
+                htmlStr += '<div><label class="block text-xs font-bold text-gray-600 mb-1">الاسم التجاري</label><input type="text" id="edit-trade-name-' + c.user_id + '" value="' + c.trade_name + '" class="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-[#0D1B6D]"></div>';
+                htmlStr += '<div><label class="block text-xs font-bold text-gray-600 mb-1">رقم السجل التجاري</label><input type="text" id="edit-trade-num-' + c.user_id + '" value="' + c.trade_number + '" class="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-[#0D1B6D]"></div>';
+                
+                // عرض المرفق
+                htmlStr += '<div><label class="block text-xs font-bold text-gray-600 mb-1">الوثيقة التجارية (صورة أو PDF)</label>';
+                htmlStr += '<div class="w-full h-32 bg-gray-200 rounded-lg border border-gray-300 flex items-center justify-center overflow-hidden">';
+                if(c.commercial_document_image) {
+                    if(c.commercial_document_image.includes('.pdf')) {
+                        htmlStr += '<div class="text-center"><i class="fas fa-file-pdf text-4xl text-red-500 mb-2"></i><div class="text-sm">ملف PDF محفوظ</div></div>';
+                    } else {
+                        htmlStr += '<img src="' + c.commercial_document_image + '" class="w-full h-full object-cover">';
+                    }
+                } else {
+                    htmlStr += '<span class="text-gray-400 text-sm">لا توجد وثيقة مرفقة</span>';
+                }
+                htmlStr += '</div>';
+                htmlStr += '<div class="flex gap-2 mt-2"><button class="flex-1 bg-[#0D1B6D] text-white py-1.5 rounded text-xs font-bold"><i class="fas fa-upload"></i> رفع ملف جديد</button>';
+                if(c.commercial_document_image) {
+                    htmlStr += '<a href="' + c.commercial_document_image + '" target="_blank" class="flex-1 bg-green-600 text-white py-1.5 rounded text-xs font-bold text-center"><i class="fas fa-download"></i> تحميل / عرض</a>';
+                }
+                htmlStr += '</div></div></div>'; // نهاية الحقول التجارية
+
+                htmlStr += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border-t border-gray-200 pt-4">';
+                htmlStr += '<div><label class="block text-xs font-bold text-gray-600 mb-1">العنوان</label><input type="text" id="edit-loc-' + c.user_id + '" value="' + c.location + '" class="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-[#0D1B6D]"></div>';
+                htmlStr += '<div><label class="block text-xs font-bold text-gray-600 mb-1">حالة الحساب (active/not_active)</label><input type="text" id="edit-status-' + c.user_id + '" value="' + c.status + '" dir="ltr" class="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-[#0D1B6D] text-left"></div>';
+                htmlStr += '</div>';
+
+                // إعدادات الرفض
+                htmlStr += '<div class="bg-orange-50 border border-orange-200 p-4 rounded-xl mb-4">';
+                htmlStr += '<h4 class="font-bold text-orange-800 text-xs mb-3">إعدادات الرفض والحظر التلقائي:</h4>';
+                htmlStr += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">';
+                htmlStr += '<div><label class="block text-xs font-bold text-gray-600 mb-1">عدد مرات الرفض</label><input type="number" id="edit-rej-' + c.user_id + '" value="' + c.number_of_rejections + '" class="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-orange-500"></div>';
+                
+                let checkBan = c.banned_status ? 'checked' : '';
+                htmlStr += '<div class="flex items-center gap-2 bg-white p-2 border border-gray-200 rounded">';
+                htmlStr += '<input type="checkbox" id="edit-ban-' + c.user_id + '" ' + checkBan + ' class="w-5 h-5 text-red-600 rounded cursor-pointer">';
+                htmlStr += '<label for="edit-ban-' + c.user_id + '" class="text-sm font-bold text-gray-700 cursor-pointer">محظور تلقائياً بسبب الرفض</label>';
+                htmlStr += '</div>';
+                htmlStr += '</div>';
+                if(c.banned_status && c.banned_date) {
+                    htmlStr += '<div class="text-red-600 text-xs mt-2 font-bold">محظور حتى تاريخ: <span dir="ltr">' + c.banned_date + '</span></div>';
+                }
+                htmlStr += '</div>';
+
+                htmlStr += '<div class="mb-4"><label class="block text-xs font-bold text-gray-600 mb-1">FCM Token (لإرسال الإشعارات)</label><input type="text" id="edit-token-' + c.user_id + '" value="' + c.fcm_token + '" class="w-full border border-gray-300 p-2 rounded focus:outline-none focus:border-[#0D1B6D]"></div>';
+
+                htmlStr += '<button onclick="updateClient(\'' + c.user_id + '\')" class="w-full bg-[#0D1B6D] hover:bg-blue-900 text-white font-bold py-3 rounded-lg shadow transition-colors">حفظ التعديلات</button>';
+
+                htmlStr += '</div></div>';
+            }
+
+            if(count === 0) {
+                htmlStr = '<div class="text-center py-20 text-gray-400"><i class="fas fa-users-slash text-6xl mb-4"></i><h3 class="text-xl font-bold">لا يوجد عملاء مطابقين للبحث</h3></div>';
+            }
+
+            container.innerHTML = htmlStr;
+            totalCountEl.innerText = count;
+        }
+
+        // --- 3. مسح البحث ---
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            renderClients();
+        }
+
+        // --- 4. التحكم بالتفاصيل (Expand/Collapse) ---
+        function toggleDetails(id) {
+            let details = document.getElementById('details-' + id);
+            let icon = document.getElementById('icon-' + id);
+            
+            if (details.classList.contains('open')) {
+                details.classList.remove('open');
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                details.classList.add('open');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            }
+        }
+
+        function toggleEditCommercial(id, isCommercial) {
+            let fields = document.getElementById('comm-fields-' + id);
+            if(isCommercial) fields.style.display = 'block';
+            else fields.style.display = 'none';
+        }
+
+        // --- 5. التحكم بالنوافذ المنبثقة للـ Add ---
+        function openModal(id) { document.getElementById(id).classList.remove('hidden-element'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden-element'); }
+
+        function openAddModal() {
+            // تصفير الحقول
+            document.getElementById('add-name').value = '';
+            document.getElementById('add-phone').value = '';
+            document.getElementById('add-trade-name').value = '';
+            document.getElementById('add-trade-number').value = '';
+            document.getElementById('add-location').value = '';
+            document.getElementById('add-status').value = 'active';
+            document.querySelector('input[name="add-type"][value="فرد"]').checked = true;
+            toggleAddCommercialFields(false);
+            
+            openModal('add-modal');
+        }
+
+        function toggleAddCommercialFields(isCommercial) {
+            let fields = document.getElementById('add-commercial-fields');
+            let label = document.getElementById('lbl-add-name');
+            if(isCommercial) {
+                fields.classList.remove('hidden-element');
+                label.innerText = 'اسم المالك التجاري';
+            } else {
+                fields.classList.add('hidden-element');
+                label.innerText = 'اسم العميل';
+            }
+        }
+
+        // --- 6. العمليات (Add, Update, Delete, Toggle Status) ---
+        function saveNewClient() {
+            let type = document.querySelector('input[name="add-type"]:checked').value;
+            let name = document.getElementById('add-name').value.trim();
+            let phone = document.getElementById('add-phone').value.trim();
+
+            if(!name || !phone) {
+                alert("يرجى إدخال اسم العميل ورقم الهاتف");
+                return;
+            }
+
+            let newClient = {
+                user_id: "USR-" + Date.now(),
+                display_name: name,
+                phone_number: phone,
+                type: type,
+                trade_name: type === 'تجاري' ? document.getElementById('add-trade-name').value : "",
+                trade_number: type === 'تجاري' ? document.getElementById('add-trade-number').value : "",
+                location: document.getElementById('add-location').value,
+                status: document.getElementById('add-status').value,
+                number_of_rejections: 0,
+                banned_status: false,
+                fcm_token: "",
+                commercial_document_image: "",
+                created_at: new Date().toISOString().split('T')[0]
+            };
+
+            clientsData.unshift(newClient);
+            closeModal('add-modal');
+            renderClients();
+            showToast("تمت إضافة العميل بنجاح");
+        }
+
+        function updateClient(id) {
+            let type = document.querySelector('input[name="type-' + id + '"]:checked').value;
+            
+            for(let i=0; i<clientsData.length; i++) {
+                if(clientsData[i].user_id === id) {
+                    clientsData[i].type = type;
+                    clientsData[i].display_name = document.getElementById('edit-name-' + id).value;
+                    clientsData[i].phone_number = document.getElementById('edit-phone-' + id).value;
+                    clientsData[i].trade_name = type === 'تجاري' ? document.getElementById('edit-trade-name-' + id).value : "";
+                    clientsData[i].trade_number = type === 'تجاري' ? document.getElementById('edit-trade-num-' + id).value : "";
+                    clientsData[i].location = document.getElementById('edit-loc-' + id).value;
+                    clientsData[i].status = document.getElementById('edit-status-' + id).value;
+                    clientsData[i].number_of_rejections = parseInt(document.getElementById('edit-rej-' + id).value) || 0;
+                    clientsData[i].banned_status = document.getElementById('edit-ban-' + id).checked;
+                    clientsData[i].fcm_token = document.getElementById('edit-token-' + id).value;
+                    
+                    toggleDetails(id); // طي التفاصيل
+                    renderClients();
+                    showToast("تم تحديث بيانات العميل");
+                    return;
+                }
+            }
+        }
+
+        function toggleClientStatus(id) {
+            for(let i=0; i<clientsData.length; i++) {
+                if(clientsData[i].user_id === id) {
+                    clientsData[i].status = clientsData[i].status === 'active' ? 'not_active' : 'active';
+                    renderClients();
+                    let msg = clientsData[i].status === 'active' ? "تم تفعيل حساب العميل" : "تم حظر حساب العميل";
+                    showToast(msg);
+                    return;
+                }
+            }
+        }
+
+        function openDeleteModal(id, name) {
+            clientToDeleteId = id;
+            document.getElementById('delete-message').innerText = "هل أنت متأكد أنك تريد حذف العميل '" + name + "' نهائياً؟";
+            document.getElementById('confirm-delete-btn').onclick = executeDelete;
+            openModal('delete-modal');
+        }
+
+        function executeDelete() {
+            for (let i = 0; i < clientsData.length; i++) {
+                if (clientsData[i].user_id === clientToDeleteId) {
+                    clientsData.splice(i, 1);
+                    break;
+                }
+            }
+            closeModal('delete-modal');
+            renderClients();
+            showToast("تم حذف العميل بنجاح");
+        }
+
+        // إشعار التنبيه الصغير (Toast)
+        function showToast(message) {
+            let toast = document.getElementById('toast-message');
+            document.getElementById('toast-text').innerText = message;
+            toast.classList.remove('hidden-element');
+            setTimeout(function() {
+                toast.classList.add('hidden-element');
+            }, 3000);
+        }
+
+        // التهيئة الأولى
+        window.onload = renderClients;
+    </script>
+</body>
+</html>
