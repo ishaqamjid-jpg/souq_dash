@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الطلبات | Souq app</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+        .order-details { display: none; }
+        .order-details.open { display: block; }
+    </style>
+</head>
+<body class="bg-gray-50 flex h-screen overflow-hidden">
+
+    <!-- القائمة الجانبية (Sidebar) -->
+    <aside class="w-64 bg-gray-900 text-white flex flex-col shrink-0 shadow-lg z-20">
+        <div class="h-16 flex items-center justify-center font-black text-2xl bg-gray-950 border-b border-gray-800">
+            Souq app
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <a href="dashboard.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">الرئيسية</a>
+            <a href="orders.html" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">إدارة الطلبات</a>
+            <a href="#" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">المنتجات</a>
+            <a href="#" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">العملاء</a>
+        </nav>
+        <div class="p-4 border-t border-gray-800">
+            <button class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">
+                تسجيل الخروج
+            </button>
+        </div>
+    </aside>
+
+    <!-- منطقة المحتوى الرئيسية -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+        
+        <header class="h-16 bg-white shadow-sm flex items-center justify-between px-8 shrink-0 z-10 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800">إدارة الطلبات</h2>
+            <div class="flex items-center gap-6">
+                <button onclick="fetchOrders()" class="text-blue-600 hover:text-blue-800 font-bold transition flex items-center gap-2">
+                    <i class="fas fa-sync-alt"></i> تحديث البيانات
+                </button>
+                <div class="h-8 w-px bg-gray-200"></div>
+                <div class="text-sm font-semibold text-gray-600 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">M</div>
+                    مدير النظام
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto bg-gray-50 flex flex-col relative">
+            <div class="flex bg-[#0D1B6D] text-gray-300 px-4 overflow-x-auto border-b-4 border-[#0D1B6D] sticky top-0 z-10 shadow-md" id="tabsContainer"></div>
+            <div class="p-6 max-w-7xl w-full mx-auto" id="ordersContainer"></div>
+        </main>
+    </div>
+
+    <!-- المنطق الخاص ببرمجة واجهة الطلبات تم كتابته بدون Template Literals معقدة -->
+    <script>
+        const tabs = [
+            { id: 'pending', label: 'المعلقة' },
+            { id: 'waiting admin approvel', label: 'الموافقة الإدارية' },
+            { id: 'waiting for approvel', label: 'قيد موافقة العميل' },
+            { id: 'going', label: 'جاري التوصيل' }
+        ];
+        
+        let currentTab = 'pending';
+
+        let ordersData = [
+            {
+                order_id: "ORD-123", order_number: 1001, order_status: "pending",
+                vehicle_name: "تويوتا", vehicle_model: "كامري 2022", brand_name: "تويوتا", manufacture: "اليابان",
+                user_number: "777123456", vin_number: "ABC123456789", delivery_location: "صنعاء - حدة", delivery_fees: 0,
+                items: [ { item_id: "ITEM-1", part_name: "فحمات فرامل", quality_type: "أصلي", quantity: 1, quotation_price: 0, selling_price: 0, trader_name: "", quotation_number: "", purchase_price: 0, invoice_number: "" } ]
+            },
+            {
+                order_id: "ORD-124", order_number: 1002, order_status: "waiting admin approvel",
+                vehicle_name: "نيسان", vehicle_model: "باترول 2020", brand_name: "نيسان", manufacture: "اليابان",
+                user_number: "777654321", vin_number: "XYZ987654321", delivery_location: "عدن - خورمكسر", delivery_fees: 1500,
+                items: [ { item_id: "ITEM-2", part_name: "فلتر زيت", quality_type: "تجاري", quantity: 2, quotation_price: 5000, selling_price: 6500, trader_name: "تاجر 1", quotation_number: "INV-001", purchase_price: 0, invoice_number: "" } ]
+            }
+        ];
+
+        function renderTabs() {
+            const tabsContainer = document.getElementById('tabsContainer');
+            tabsContainer.innerHTML = '';
+            
+            for(let i=0; i<tabs.length; i++) {
+                let tab = tabs[i];
+                let isActive = tab.id === currentTab;
+                let button = document.createElement('button');
+                
+                let activeClass = isActive ? 'border-[#4CAF50] text-white bg-white/5' : 'border-transparent hover:text-white hover:bg-white/5';
+                button.className = 'px-8 py-3.5 font-bold transition-colors duration-300 border-b-4 whitespace-nowrap text-[15px] ' + activeClass;
+                button.innerText = tab.label;
+                button.onclick = function() {
+                    currentTab = tab.id;
+                    renderTabs();
+                    renderOrders();
+                };
+                tabsContainer.appendChild(button);
+            }
+        }
+
+        function renderOrders() {
+            const container = document.getElementById('ordersContainer');
+            const filteredOrders = ordersData.filter(function(o) { return o.order_status === currentTab; });
+
+            if (filteredOrders.length === 0) {
+                container.innerHTML = '<div class="flex flex-col items-center justify-center py-20 text-gray-400">' +
+                                      '<i class="fas fa-box-open text-6xl mb-4"></i>' +
+                                      '<div class="text-xl font-bold">لا توجد طلبات هنا حالياً</div>' +
+                                      '</div>';
+                return;
+            }
+
+            let finalHtml = '<div class="space-y-5">';
+            
+            for(let i=0; i<filteredOrders.length; i++) {
+                let order = filteredOrders[i];
+                
+                let isPending = currentTab === 'pending';
+                let isAdminApproval = currentTab === 'waiting admin approvel';
+                let isGoing = currentTab === 'going';
+
+                let statusText = isPending ? 'معلق قيد التسعير' : 
+                                 isAdminApproval ? 'بانتظار الموافقة الإدارية' : 
+                                 isGoing ? 'جاري التوصيل' : 'بانتظار موافقة العميل';
+                
+                let statusColor = isPending ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 
+                                  isAdminApproval ? 'bg-orange-100 text-orange-800 border-orange-200' : 
+                                  isGoing ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-green-100 text-green-800 border-green-200';
+
+                // بناء صفوف القطع بطريقة آمنة تماماً
+                let itemsHtml = '';
+                for(let j=0; j<order.items.length; j++) {
+                    let item = order.items[j];
+                    let bgClass = j % 2 !== 0 ? 'bg-gray-50' : 'bg-white';
+                    let disabledAttr = (isPending || isAdminApproval || isGoing) ? '' : 'disabled';
+                    
+                    let nameField = isPending 
+                        ? '<input type="text" class="border border-gray-300 p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium" value="' + item.part_name + '" onchange="updateItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'part_name\', this.value)">'
+                        : item.part_name;
+
+                    let pricingFields = '';
+                    if(isPending || isAdminApproval) {
+                        pricingFields = '<td class="p-3"><input type="number" class="border border-gray-300 p-2 w-28 rounded text-center focus:outline-none focus:border-blue-500 transition-colors font-medium" placeholder="0.0" value="' + (item.quotation_price || '') + '" onchange="updateItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'quotation_price\', this.value)"></td>' +
+                                        '<td class="p-3"><input type="number" class="border border-gray-300 p-2 w-28 rounded text-center focus:outline-none focus:border-blue-500 transition-colors font-medium text-green-700" placeholder="0.0" value="' + (item.selling_price || '') + '" onchange="updateItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'selling_price\', this.value)"></td>';
+                    }
+
+                    let purchaseField = '';
+                    if(isGoing) {
+                        purchaseField = '<td class="p-3"><input type="number" class="border border-gray-300 p-2 w-28 rounded text-center focus:outline-none focus:border-blue-500 transition-colors font-medium text-red-600" placeholder="0.0" value="' + (item.purchase_price || '') + '" onchange="updateItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'purchase_price\', this.value)"></td>';
+                    }
+
+                    let traderField = '<select class="border border-gray-300 p-2 rounded w-full bg-white focus:outline-none focus:border-blue-500 transition-colors font-medium" onchange="updateItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'trader_name\', this.value)" ' + disabledAttr + '>' +
+                                      '<option value="">اختر تاجر...</option>' +
+                                      '<option value="تاجر 1" ' + (item.trader_name === 'تاجر 1' ? 'selected' : '') + '>تاجر 1</option>' +
+                                      '<option value="تاجر 2" ' + (item.trader_name === 'تاجر 2' ? 'selected' : '') + '>تاجر 2</option>' +
+                                      '</select>';
+
+                    let invoiceVal = isGoing ? (item.invoice_number || '') : (item.quotation_number || '');
+                    let invoiceFieldType = isGoing ? 'invoice_number' : 'quotation_number';
+
+                    itemsHtml += '<tr class="border-b ' + bgClass + ' hover:bg-gray-100 transition-colors">' +
+                                 '<td class="p-3 font-bold text-gray-800">' + nameField + '</td>' +
+                                 '<td class="p-3 text-gray-600 whitespace-nowrap">' + item.quality_type + ' | كمية: <span class="font-black text-black bg-gray-200 px-2 py-0.5 rounded">' + item.quantity + '</span></td>' +
+                                 pricingFields +
+                                 purchaseField +
+                                 '<td class="p-3 min-w-[140px]">' + traderField + '</td>' +
+                                 '<td class="p-3"><input type="text" class="border border-gray-300 p-2 w-32 rounded text-center focus:outline-none focus:border-blue-500 transition-colors font-medium uppercase" placeholder="رقم الفاتورة" value="' + invoiceVal + '" onchange="updateItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'' + invoiceFieldType + '\', this.value)" ' + disabledAttr + '></td>' +
+                                 '</tr>';
+                }
+
+                // بناء بطاقة الطلب بالكامل
+                let orderHtml = '<div class="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-md">' +
+                                '<div class="p-5 cursor-pointer transition flex justify-between items-start" onclick="toggleDetails(\'' + order.order_id + '\')">' +
+                                    '<div class="flex-1">' +
+                                        '<div class="flex items-center gap-3 mb-3">' +
+                                            '<span class="text-[#D32F2F] font-black text-lg">طلب رقم: #' + order.order_number + '</span>' +
+                                            '<span class="px-3 py-1 rounded-full text-xs font-bold border ' + statusColor + '">' + statusText + '</span>' +
+                                        '</div>' +
+                                        '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3 text-sm">' +
+                                            '<div class="text-[#0D1B6D] font-bold text-[15px] col-span-1 md:col-span-2 lg:col-span-1">المركبة: ' + order.vehicle_name + ' - ' + order.vehicle_model + '</div>' +
+                                            '<div class="text-gray-600"><i class="fas fa-user text-gray-400 ml-1"></i> العميل: <span class="font-bold text-[#0D1B6D]">مؤقتاً (من DB)</span></div>' +
+                                            '<div class="text-gray-600"><i class="fas fa-phone text-gray-400 ml-1"></i> الهاتف: ' + order.user_number + '</div>' +
+                                            '<div class="text-gray-600"><i class="fas fa-industry text-gray-400 ml-1"></i> الشركة: ' + order.brand_name + ' (' + order.manufacture + ')</div>' +
+                                            '<div class="text-gray-600"><i class="fas fa-barcode text-gray-400 ml-1"></i> القاعدة (VIN): <span class="uppercase font-semibold tracking-wide text-gray-800">' + order.vin_number + '</span></div>' +
+                                            '<div class="text-gray-600"><i class="fas fa-map-marker-alt text-gray-400 ml-1"></i> الموقع: ' + order.delivery_location + '</div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                    '<div class="bg-gray-50 hover:bg-gray-100 border border-gray-200 w-10 h-10 rounded-full flex items-center justify-center transition-colors ml-2 shrink-0">' +
+                                        '<i id="icon-' + order.order_id + '" class="fas fa-chevron-down text-[#0D1B6D]"></i>' +
+                                    '</div>' +
+                                '</div>' +
+                                '<div id="details-' + order.order_id + '" class="order-details p-5 border-t border-gray-200 bg-slate-50/50">' +
+                                    '<h3 class="font-bold text-blue-600 mb-4 flex items-center gap-2"><i class="fas fa-cogs"></i> القطع المطلوبة وتسعيرها</h3>' +
+                                    '<div class="overflow-x-auto mb-5 rounded-lg border border-gray-200 shadow-sm">' +
+                                        '<table class="w-full text-sm text-right border-collapse bg-white min-w-[800px]">' +
+                                            '<thead class="bg-[#0D1B6D] text-white">' +
+                                                '<tr>' +
+                                                    '<th class="p-3 font-semibold">اسم القطعة</th>' +
+                                                    '<th class="p-3 font-semibold">النوع / الكمية</th>' +
+                                                    (isPending || isAdminApproval ? '<th class="p-3 font-semibold">مبلغ العرض</th><th class="p-3 font-semibold">سعر البيع</th>' : '') +
+                                                    (isGoing ? '<th class="p-3 font-semibold">سعر الشراء</th>' : '') +
+                                                    '<th class="p-3 font-semibold">التاجر</th>' +
+                                                    '<th class="p-3 font-semibold">رقم الفاتورة</th>' +
+                                                '</tr>' +
+                                            '</thead>' +
+                                            '<tbody>' + itemsHtml + '</tbody>' +
+                                        '</table>' +
+                                    '</div>';
+
+                if(isPending) {
+                    orderHtml += '<button class="text-[#4CAF50] font-bold flex items-center gap-2 mb-6 hover:bg-green-50 px-4 py-2 rounded transition border border-green-200 bg-white shadow-sm" onclick="addNewItem(\'' + order.order_id + '\')"><i class="fas fa-plus"></i> إضافة صنف جديد للفاتورة</button>';
+                }
+
+                if(isPending || isAdminApproval) {
+                    orderHtml += '<div class="mb-6 w-full md:w-1/3 lg:w-1/4">' +
+                                 '<label class="block text-sm font-bold text-gray-700 mb-2">رسوم التوصيل الكلية (إن وجدت):</label>' +
+                                 '<input type="number" class="border border-gray-300 focus:border-[#0D1B6D] focus:ring-2 focus:ring-blue-500/20 p-2.5 rounded w-full outline-none font-bold text-lg" placeholder="0.0" value="' + (order.delivery_fees || '') + '" onchange="updateDeliveryFees(\'' + order.order_id + '\', this.value)">' +
+                                 '</div>';
+                }
+
+                let actionsHtml = '';
+                if(isPending) {
+                    actionsHtml = '<button onclick="processOrder(\'' + order.order_id + '\', \'canceled\')" class="px-6 py-2.5 text-red-600 font-bold hover:bg-red-50 rounded border border-transparent hover:border-red-200 transition">إلغاء الطلب نهائياً</button>' +
+                                  '<button onclick="processOrder(\'' + order.order_id + '\', \'waiting admin approvel\')" class="px-8 py-2.5 bg-[#0D1B6D] text-white font-bold rounded shadow-md hover:bg-blue-900 transition flex items-center gap-2">طلب اعتماد من الإدارة <i class="fas fa-paper-plane text-sm"></i></button>';
+                } else if(isAdminApproval) {
+                    actionsHtml = '<button onclick="processOrder(\'' + order.order_id + '\', \'pending\')" class="px-6 py-2.5 text-[#E65100] font-bold hover:bg-orange-50 rounded border border-transparent hover:border-orange-200 transition">إعادة للمراجعة والتعديل</button>' +
+                                  '<button onclick="processOrder(\'' + order.order_id + '\', \'waiting for approvel\')" class="px-8 py-2.5 bg-[#4CAF50] text-white font-bold rounded shadow-md hover:bg-green-600 transition flex items-center gap-2">اعتماد نهائي (إرسال للعميل) <i class="fas fa-check-circle text-sm"></i></button>';
+                } else if(isGoing) {
+                    actionsHtml = '<button onclick="processOrder(\'' + order.order_id + '\', \'canceled\')" class="px-6 py-2.5 border border-red-500 text-red-500 font-bold hover:bg-red-50 rounded transition">إلغاء الطلب (إرجاع)</button>' +
+                                  '<button onclick="processOrder(\'' + order.order_id + '\', \'completed\')" class="px-8 py-2.5 bg-[#4CAF50] text-white font-bold rounded shadow-md hover:bg-green-600 transition flex items-center gap-2">إنهاء بنجاح (تم التسليم) <i class="fas fa-truck-loading text-sm"></i></button>';
+                }
+
+                orderHtml += '<div class="flex flex-wrap justify-end gap-3 mt-8 border-t border-gray-200 pt-5">' + actionsHtml + '</div>' +
+                             '</div></div>';
+
+                finalHtml += orderHtml;
+            }
+
+            finalHtml += '</div>';
+            container.innerHTML = finalHtml;
+        }
+        
+        function toggleDetails(orderId) {
+            const detailsDiv = document.getElementById('details-' + orderId);
+            const icon = document.getElementById('icon-' + orderId);
+            
+            if (detailsDiv.classList.contains('open')) {
+                detailsDiv.classList.remove('open');
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                detailsDiv.classList.add('open');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            }
+        }
+
+        function updateItem(orderId, itemId, field, value) {
+            for(let i=0; i<ordersData.length; i++) {
+                if(ordersData[i].order_id === orderId) {
+                    for(let j=0; j<ordersData[i].items.length; j++) {
+                        if(ordersData[i].items[j].item_id === itemId) {
+                            if(field === 'quotation_price' || field === 'selling_price' || field === 'purchase_price') {
+                                ordersData[i].items[j][field] = parseFloat(value) || 0;
+                            } else {
+                                ordersData[i].items[j][field] = value;
+                            }
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateDeliveryFees(orderId, value) {
+            for(let i=0; i<ordersData.length; i++) {
+                if(ordersData[i].order_id === orderId) {
+                    ordersData[i].delivery_fees = parseFloat(value) || 0;
+                    return;
+                }
+            }
+        }
+
+        function addNewItem(orderId) {
+            for(let i=0; i<ordersData.length; i++) {
+                if(ordersData[i].order_id === orderId) {
+                    let newItem = {
+                        item_id: "ITEM-" + Date.now(), part_name: "صنف جديد", quality_type: "-", quantity: 1,
+                        quotation_price: 0, selling_price: 0, trader_name: "", quotation_number: "", purchase_price: 0, invoice_number: ""
+                    };
+                    ordersData[i].items.push(newItem);
+                    renderOrders(); 
+                    
+                    setTimeout(function() {
+                        let detailsDiv = document.getElementById('details-' + orderId);
+                        let icon = document.getElementById('icon-' + orderId);
+                        if(detailsDiv && icon) {
+                            detailsDiv.classList.add('open');
+                            icon.classList.remove('fa-chevron-down');
+                            icon.classList.add('fa-chevron-up');
+                        }
+                    }, 50);
+                    return;
+                }
+            }
+        }
+
+        function processOrder(orderId, newStatus) {
+            for(let i=0; i<ordersData.length; i++) {
+                if (ordersData[i].order_id === orderId) {
+                    if (newStatus === 'canceled' || newStatus === 'completed') {
+                        ordersData.splice(i, 1);
+                        alert('تم نقل الطلب بنجاح.');
+                    } else {
+                        ordersData[i].order_status = newStatus;
+                        alert('تم تغيير حالة الطلب بنجاح ونقله للتبويب التالي.');
+                    }
+                    renderOrders();
+                    return;
+                }
+            }
+        }
+
+        function fetchOrders() {
+            renderTabs();
+            renderOrders();
+        }
+
+        window.onload = fetchOrders;
+    </script>
+</body>
+</html>
