@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>فواتير سعر | Souq app</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+        .hidden-element { display: none !important; }
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); }
+        /* زر الإضافة العائم */
+        .fab-button {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            z-index: 40;
+        }
+        /* لتخصيص السكرول بار في القائمة الجانبية */
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-[#121212] flex h-screen overflow-hidden text-white">
+
+    <!-- القائمة الجانبية (Sidebar) -->
+    <aside class="w-64 bg-gray-900 text-white flex flex-col shrink-0 shadow-xl z-20">
+        <div class="h-16 flex items-center justify-center font-black text-2xl bg-gray-950 border-b border-gray-800">
+            Souq app
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+            <a href="dashboard.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">الرئيسية</a>
+            <a href="orders.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الطلبات</a>
+            <a href="reports.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">التقارير والإحصائيات</a>
+            <a href="ads.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الإعلانات</a>
+            <a href="trader.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة التجار</a>
+            <a href="clients.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">عملاء التطبيق</a>
+            <a href="constant.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الثوابت</a>
+            <a href="users.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">موظفو النظام</a>
+            <!-- الزر النشط الآن هو فواتير سعر -->
+            <a href="quotations.html" class="block px-4 py-3 bg-[#E91E63] shadow-md rounded-lg transition-colors font-bold">فواتير سعر</a>
+        </nav>
+        <div class="p-4 border-t border-gray-800">
+            <button class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">
+                تسجيل الخروج
+            </button>
+        </div>
+    </aside>
+
+    <!-- منطقة المحتوى الرئيسية -->
+    <div class="flex-1 flex flex-col overflow-hidden relative bg-[#121212]">
+        
+        <header class="h-16 bg-[#1E1E1E] text-white shadow-md flex items-center justify-between px-8 shrink-0 z-10 border-b border-gray-800">
+            <h2 class="text-xl font-bold">فواتير سعر</h2>
+            <div class="flex items-center gap-6">
+                <button onclick="renderQuotations()" class="text-gray-300 hover:text-white font-bold transition flex items-center gap-2">
+                    <i class="fas fa-sync-alt"></i> تحديث
+                </button>
+                <div class="bg-white/10 px-4 py-1.5 rounded-full font-bold text-sm">
+                    العدد: <span id="total-count">0</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto p-6 relative">
+            
+            <!-- شريط فلاتر البحث -->
+            <div class="max-w-5xl mx-auto mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="relative">
+                    <i class="fas fa-cogs absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="filter-part" onkeyup="renderQuotations()" placeholder="فلتر القطعة..." class="w-full bg-[#1E1E1E] text-white border border-gray-700 rounded-xl focus:ring-[#E91E63] focus:border-[#E91E63] block pr-12 p-3.5 outline-none transition-colors">
+                </div>
+                <div class="relative">
+                    <i class="fas fa-file-invoice absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="number" id="filter-num" onkeyup="renderQuotations()" placeholder="فلتر رقم الفاتورة..." class="w-full bg-[#1E1E1E] text-white border border-gray-700 rounded-xl focus:ring-[#E91E63] focus:border-[#E91E63] block pr-12 p-3.5 outline-none transition-colors">
+                </div>
+            </div>
+
+            <!-- حاوية الفواتير -->
+            <div id="quotationsContainer" class="max-w-5xl mx-auto space-y-4 pb-24"></div>
+
+        </main>
+
+        <!-- زر الإضافة العائم -->
+        <button onclick="openFormModal()" class="fab-button w-14 h-14 bg-[#E91E63] hover:bg-pink-600 text-white rounded-full shadow-[0_4px_15px_rgba(233,30,99,0.4)] flex items-center justify-center transition-transform hover:scale-105">
+            <i class="fas fa-plus text-xl"></i>
+        </button>
+    </div>
+
+    <!-- ======================= النوافذ المنبثقة (Modals) ======================= -->
+
+    <!-- نافذة إضافة / تعديل فاتورة -->
+    <div id="form-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-white text-gray-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto flex flex-col">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
+                <h3 id="modal-title" class="text-xl font-bold text-[#0D1B6D]">إضافة فاتورة جديدة</h3>
+                <button onclick="closeModal('form-modal')" class="text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-500 mb-1">معرف الفاتورة (quotation_id)</label>
+                    <input type="text" id="quote-id" readonly placeholder="تلقائي (Auto Generated)" class="w-full bg-gray-100 border border-gray-200 text-gray-500 p-2.5 rounded-lg outline-none cursor-not-allowed text-left" dir="ltr">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">اسم القطعة <span class="text-red-500">*</span></label>
+                    <input type="text" id="quote-part" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#4CAF50] transition-colors">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">اسم التاجر</label>
+                    <input type="text" id="quote-trader" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#4CAF50] transition-colors">
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">رقم الفاتورة <span class="text-red-500">*</span></label>
+                        <input type="number" id="quote-num" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#4CAF50] transition-colors text-left" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">مبلغ الفاتورة</label>
+                        <input type="number" id="quote-price" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#4CAF50] transition-colors text-left" dir="ltr">
+                    </div>
+                </div>
+
+            </div>
+            <div class="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 rounded-b-2xl sticky bottom-0">
+                <button onclick="closeModal('form-modal')" class="px-6 py-2.5 text-gray-600 font-bold hover:bg-gray-200 rounded-lg transition-colors">إلغاء</button>
+                <button onclick="saveQuotation()" class="px-8 py-2.5 bg-[#4CAF50] text-white font-bold rounded-lg shadow-md hover:bg-green-600 transition-colors">حفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة تأكيد الحذف -->
+    <div id="delete-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-white text-gray-900 rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-triangle text-3xl text-red-600"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">تأكيد الحذف</h3>
+            <p class="text-gray-500 mb-6">هل أنت متأكد من حذف هذه الفاتورة نهائياً؟</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeModal('delete-modal')" class="flex-1 px-4 py-2 text-gray-600 font-bold bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">إلغاء</button>
+                <button id="confirm-delete-btn" class="flex-1 px-4 py-2 bg-red-600 text-white font-bold hover:bg-red-700 rounded-lg transition-colors">حذف</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- إشعار التنبيه (Toast) -->
+    <div id="toast-message" class="fixed top-4 left-1/2 transform -translate-x-1/2 text-white px-6 py-3 rounded-xl shadow-lg hidden-element transition-opacity z-50 flex items-center gap-3">
+        <i id="toast-icon" class="fas fa-check-circle text-xl"></i> <span id="toast-text" class="font-bold"></span>
+    </div>
+
+    <script>
+        // --- 1. البيانات الوهمية للمحاكاة ---
+        let quotationsData = [
+            { quotation_id: "QID-12345", part_name: "فحمات فرامل أمامي", trader_name: "مؤسسة النور", quotation_number: "1001", quotation_price: "4500", created_at: "2023-10-01" },
+            { quotation_id: "QID-67890", part_name: "فلتر هواء", trader_name: "وكالة بازرعة", quotation_number: "2045", quotation_price: "1200", created_at: "2023-10-05" },
+            { quotation_id: "QID-54321", part_name: "مساعدات خلفية", trader_name: "مؤسسة العليمي", quotation_number: "8899", quotation_price: "18500", created_at: "2023-10-10" }
+        ];
+
+        let deleteTargetId = null;
+
+        // --- 2. رسم بيانات الفواتير ---
+        function renderQuotations() {
+            let container = document.getElementById('quotationsContainer');
+            let filterPart = document.getElementById('filter-part').value.toLowerCase();
+            let filterNum = document.getElementById('filter-num').value.toLowerCase();
+            let totalCountEl = document.getElementById('total-count');
+
+            let htmlStr = '';
+            let count = 0;
+
+            for (let i = 0; i < quotationsData.length; i++) {
+                let q = quotationsData[i];
+                
+                // تطبيق الفلاتر
+                if (filterPart && !q.part_name.toLowerCase().includes(filterPart)) continue;
+                if (filterNum && !q.quotation_number.toLowerCase().includes(filterNum)) continue;
+                
+                count++;
+
+                htmlStr += '<div class="bg-[#1E1E1E] rounded-xl shadow-lg border border-gray-700 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-gray-500 transition-colors">';
+                
+                htmlStr += '<div class="flex-1">';
+                htmlStr += '<h3 class="text-lg font-bold text-white mb-2">القطعة: ' + q.part_name + '</h3>';
+                htmlStr += '<div class="text-gray-400 text-sm mb-1">التاجر: <span class="text-gray-300">' + (q.trader_name || 'غير محدد') + '</span></div>';
+                htmlStr += '<div class="text-gray-400 text-sm mb-1">رقم الفاتورة: <span class="text-gray-300 font-bold" dir="ltr">' + q.quotation_number + '</span></div>';
+                htmlStr += '<div class="text-[#4CAF50] text-sm mb-2 font-bold">المبلغ: <span dir="ltr">' + q.quotation_price + '</span></div>';
+                htmlStr += '<div class="text-gray-500 text-xs">معرف الفاتورة (ID): <span dir="ltr">' + q.quotation_id + '</span></div>';
+                htmlStr += '</div>';
+
+                // الأزرار
+                htmlStr += '<div class="flex gap-2 justify-end md:justify-center">';
+                htmlStr += '<button onclick="openFormModal(\'' + q.quotation_id + '\')" class="w-10 h-10 rounded-full bg-blue-900/30 text-[#2196F3] hover:bg-blue-900/50 flex items-center justify-center transition-colors shadow-sm"><i class="fas fa-edit"></i></button>';
+                htmlStr += '<button onclick="attemptDelete(\'' + q.quotation_id + '\')" class="w-10 h-10 rounded-full bg-red-900/30 text-red-500 hover:bg-red-900/50 flex items-center justify-center transition-colors shadow-sm"><i class="fas fa-trash"></i></button>';
+                htmlStr += '</div>';
+
+                htmlStr += '</div>';
+            }
+
+            if(count === 0) {
+                htmlStr = '<div class="text-center py-20 text-gray-500"><i class="fas fa-file-invoice-dollar text-6xl mb-4 opacity-50"></i><h3 class="text-xl font-bold">لا توجد فواتير مطابقة لبحثك</h3></div>';
+            }
+
+            container.innerHTML = htmlStr;
+            totalCountEl.innerText = count;
+        }
+
+        // --- 3. التحكم بالنوافذ المنبثقة (Modals) ---
+        function openModal(id) { document.getElementById(id).classList.remove('hidden-element'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden-element'); }
+
+        function openFormModal(id) {
+            let titleEl = document.getElementById('modal-title');
+            let idInput = document.getElementById('quote-id');
+            let partInput = document.getElementById('quote-part');
+            let traderInput = document.getElementById('quote-trader');
+            let numInput = document.getElementById('quote-num');
+            let priceInput = document.getElementById('quote-price');
+
+            if (id) {
+                // وضع التعديل
+                titleEl.innerText = "تعديل الفاتورة";
+                for (let i = 0; i < quotationsData.length; i++) {
+                    if (quotationsData[i].quotation_id === id) {
+                        let q = quotationsData[i];
+                        idInput.value = q.quotation_id;
+                        partInput.value = q.part_name;
+                        traderInput.value = q.trader_name;
+                        numInput.value = q.quotation_number;
+                        priceInput.value = q.quotation_price;
+                        break;
+                    }
+                }
+            } else {
+                // وضع الإضافة
+                titleEl.innerText = "إضافة فاتورة جديدة";
+                idInput.value = "";
+                partInput.value = "";
+                traderInput.value = "";
+                numInput.value = "";
+                priceInput.value = "";
+            }
+            openModal('form-modal');
+        }
+
+        // --- 4. العمليات (حفظ وتأكيد حذف) ---
+        function saveQuotation() {
+            let id = document.getElementById('quote-id').value;
+            let part = document.getElementById('quote-part').value.trim();
+            let trader = document.getElementById('quote-trader').value.trim();
+            let num = document.getElementById('quote-num').value.trim();
+            let price = document.getElementById('quote-price').value.trim();
+
+            if(!part || !num) {
+                showToast("يرجى تعبئة الحقول الإجبارية (اسم القطعة ورقم الفاتورة)", false);
+                return;
+            }
+
+            let newQuote = {
+                quotation_id: id || "QID-" + Math.floor(Math.random() * 100000),
+                part_name: part,
+                trader_name: trader,
+                quotation_number: num,
+                quotation_price: price,
+                created_at: new Date().toISOString()
+            };
+
+            if (id) {
+                // تعديل
+                for (let i = 0; i < quotationsData.length; i++) {
+                    if (quotationsData[i].quotation_id === id) {
+                        quotationsData[i] = newQuote;
+                        break;
+                    }
+                }
+            } else {
+                // إضافة
+                quotationsData.unshift(newQuote);
+            }
+
+            closeModal('form-modal');
+            renderQuotations();
+            showToast(id ? "تم التعديل بنجاح" : "تمت الإضافة بنجاح", true);
+        }
+
+        function attemptDelete(id) {
+            deleteTargetId = id;
+            document.getElementById('confirm-delete-btn').onclick = executeDelete;
+            openModal('delete-modal');
+        }
+
+        function executeDelete() {
+            for (let i = 0; i < quotationsData.length; i++) {
+                if (quotationsData[i].quotation_id === deleteTargetId) {
+                    quotationsData.splice(i, 1);
+                    break;
+                }
+            }
+            closeModal('delete-modal');
+            renderQuotations();
+            showToast("تم حذف الفاتورة بنجاح", true);
+        }
+
+        // إشعار التنبيه (Toast)
+        function showToast(message, isSuccess) {
+            let toast = document.getElementById('toast-message');
+            let icon = document.getElementById('toast-icon');
+            
+            document.getElementById('toast-text').innerText = message;
+            
+            if (isSuccess) {
+                toast.className = "fixed top-4 left-1/2 transform -translate-x-1/2 bg-[#4CAF50] text-white px-6 py-3 rounded-xl shadow-lg transition-opacity z-50 flex items-center gap-3";
+                icon.className = "fas fa-check-circle text-xl";
+            } else {
+                toast.className = "fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-xl shadow-lg transition-opacity z-50 flex items-center gap-3";
+                icon.className = "fas fa-exclamation-triangle text-xl";
+            }
+
+            toast.classList.remove('hidden-element');
+            setTimeout(function() {
+                toast.classList.add('hidden-element');
+            }, 4000);
+        }
+
+        // التهيئة الأولى عند تحميل الصفحة
+        window.onload = renderQuotations;
+    </script>
+</body>
+</html>
