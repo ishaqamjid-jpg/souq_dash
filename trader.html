@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة التجار | Souq app</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+        .hidden-element { display: none !important; }
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); }
+        
+        /* زر الإضافة العائم (FAB) */
+        .fab-button {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            z-index: 40;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex h-screen overflow-hidden">
+
+    <!-- القائمة الجانبية (Sidebar) -->
+    <aside class="w-64 bg-gray-900 text-white flex flex-col shrink-0 shadow-lg z-20">
+        <div class="h-16 flex items-center justify-center font-black text-2xl bg-gray-950 border-b border-gray-800">
+            Souq app
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <a href="dashboard.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">الرئيسية</a>
+            <a href="orders.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الطلبات</a>
+            <a href="reports.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">التقارير والإحصائيات</a>
+            <a href="ads.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الإعلانات</a>
+            <!-- الزر النشط الآن هو إدارة التجار -->
+            <a href="trader.html" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">إدارة التجار</a>
+            <a href="#" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">المنتجات</a>
+            <a href="#" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">العملاء</a>
+        </nav>
+        <div class="p-4 border-t border-gray-800">
+            <button class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">
+                تسجيل الخروج
+            </button>
+        </div>
+    </aside>
+
+    <!-- منطقة المحتوى الرئيسية -->
+    <div class="flex-1 flex flex-col overflow-hidden relative">
+        
+        <header class="h-16 bg-[#0D1B6D] text-white shadow-sm flex items-center justify-between px-8 shrink-0 z-10">
+            <h2 class="text-xl font-bold">إدارة التجار</h2>
+            <div class="flex items-center gap-6">
+                <div class="bg-white/20 px-4 py-1.5 rounded-full font-bold text-sm">
+                    العدد: <span id="total-count">0</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto bg-gray-50 p-6 relative">
+            
+            <!-- شريط البحث -->
+            <div class="max-w-7xl mx-auto mb-6 relative">
+                <i class="fas fa-search absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="search-input" onkeyup="renderTraders()" placeholder="ابحث عن تاجر..." class="w-full bg-white border border-gray-200 text-gray-900 rounded-xl shadow-sm focus:ring-[#0D1B6D] focus:border-[#0D1B6D] block pr-12 p-3.5 outline-none transition-colors">
+                <button id="clear-search" onclick="clearSearch()" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 hidden-element transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- حاوية بطاقات التجار -->
+            <div id="tradersContainer" class="max-w-7xl mx-auto space-y-4 pb-24"></div>
+
+        </main>
+
+        <!-- زر الإضافة العائم (Floating Action Button) -->
+        <button onclick="openTraderModal()" class="fab-button w-14 h-14 bg-[#4CAF50] hover:bg-green-600 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105">
+            <i class="fas fa-plus text-xl"></i>
+        </button>
+    </div>
+
+    <!-- ======================= النوافذ المنبثقة (Modals) ======================= -->
+
+    <!-- نافذة إضافة / تعديل تاجر -->
+    <div id="trader-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto flex flex-col">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
+                <h3 id="modal-title" class="text-xl font-bold text-[#0D1B6D]">إضافة تاجر جديد</h3>
+                <button onclick="closeModal('trader-modal')" class="text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="trader-id">
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">اسم التاجر <span class="text-red-500">*</span></label>
+                    <input type="text" id="trader-name" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">الرقم الأساسي <span class="text-red-500">*</span></label>
+                    <input type="tel" id="trader-primary" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500 text-left" dir="ltr">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">الرقم الاحتياطي</label>
+                    <input type="tel" id="trader-secondary" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500 text-left" dir="ltr">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">العنوان</label>
+                    <input type="text" id="trader-location" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">اسم الموظف</label>
+                    <input type="text" id="trader-emp" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">ملاحظات</label>
+                    <textarea id="trader-note" rows="2" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500 resize-none"></textarea>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 rounded-b-2xl sticky bottom-0">
+                <button onclick="closeModal('trader-modal')" class="px-6 py-2.5 text-gray-600 font-bold hover:bg-gray-200 rounded-lg transition-colors">إلغاء</button>
+                <button onclick="saveTrader()" class="px-8 py-2.5 bg-[#4CAF50] text-white font-bold rounded-lg shadow-md hover:bg-green-600 transition-colors">حفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة اختيار رقم الاتصال -->
+    <div id="call-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <h3 class="text-xl font-bold text-[#0D1B6D] mb-6">اختر الرقم للاتصال</h3>
+            <div class="space-y-3">
+                <button id="call-primary-btn" class="w-full bg-[#4CAF50] hover:bg-green-600 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-phone"></i> الرقم الأساسي: <span id="call-primary-text" dir="ltr"></span>
+                </button>
+                <button id="call-secondary-btn" class="w-full bg-[#2196F3] hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-phone-alt"></i> الرقم الاحتياطي: <span id="call-secondary-text" dir="ltr"></span>
+                </button>
+            </div>
+            <button onclick="closeModal('call-modal')" class="mt-6 text-gray-500 font-bold hover:text-gray-700 transition-colors">إلغاء</button>
+        </div>
+    </div>
+
+    <!-- نافذة تأكيد الحذف -->
+    <div id="delete-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-triangle text-3xl text-red-600"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">تأكيد الحذف</h3>
+            <p class="text-gray-500 mb-6" id="delete-message">هل أنت متأكد من حذف هذا التاجر؟</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeModal('delete-modal')" class="flex-1 px-4 py-2 text-gray-600 font-bold bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">إلغاء</button>
+                <button id="confirm-delete-btn" class="flex-1 px-4 py-2 bg-red-600 text-white font-bold hover:bg-red-700 rounded-lg transition-colors">حذف</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- إشعار النسخ (Toast) -->
+    <div id="toast-message" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg hidden-element transition-opacity z-50 flex items-center gap-2">
+        <i class="fas fa-check-circle text-green-400"></i> <span id="toast-text"></span>
+    </div>
+
+    <script>
+        // --- 1. البيانات الوهمية للمحاكاة ---
+        let tradersData = [
+            { id: "TR-1", trader_name: "مؤسسة النور لقطع الغيار", primary_number: "777123456", secondary_number: "711987654", location: "صنعاء - شارع تعز", name: "أحمد", note: "متخصص في قطع التويوتا" },
+            { id: "TR-2", trader_name: "وكالة بازرعة", primary_number: "733445566", secondary_number: "", location: "عدن - المعلا", name: "", note: "أسعار جملة فقط" }
+        ];
+
+        let traderToDeleteId = null;
+        let isAdmin = true; // يمكن تغييرها لمحاكاة الصلاحيات
+
+        // --- 2. رسم بيانات التجار ---
+        function renderTraders() {
+            let container = document.getElementById('tradersContainer');
+            let query = document.getElementById('search-input').value.toLowerCase();
+            let clearBtn = document.getElementById('clear-search');
+            let totalCountEl = document.getElementById('total-count');
+            
+            if(query.length > 0) clearBtn.classList.remove('hidden-element');
+            else clearBtn.classList.add('hidden-element');
+
+            let htmlStr = '';
+            let count = 0;
+
+            for (let i = 0; i < tradersData.length; i++) {
+                let trader = tradersData[i];
+                if (query && !trader.trader_name.toLowerCase().includes(query)) continue;
+                
+                count++;
+                
+                htmlStr += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-md transition-shadow">';
+                
+                // تفاصيل التاجر
+                htmlStr += '<div class="flex-1">';
+                htmlStr += '<h3 class="text-xl font-bold text-[#0D1B6D] mb-1">' + trader.trader_name + '</h3>';
+                htmlStr += '<div class="text-gray-700 text-sm mb-1">الرقم الأساسي: <span dir="ltr" class="font-bold">' + trader.primary_number + '</span></div>';
+                if(trader.secondary_number) {
+                    htmlStr += '<div class="text-gray-700 text-sm mb-1">الرقم الاحتياطي: <span dir="ltr" class="font-bold">' + trader.secondary_number + '</span></div>';
+                }
+                htmlStr += '<div class="text-gray-500 text-sm flex items-center gap-1 mb-2"><i class="fas fa-map-marker-alt w-4"></i> ' + (trader.location || "غير محدد") + '</div>';
+                
+                if (trader.name) {
+                    htmlStr += '<div class="text-[#2196F3] text-sm font-medium">اسم الموظف: ' + trader.name + '</div>';
+                }
+                if (trader.note) {
+                    htmlStr += '<div class="text-[#E91E63] text-sm">ملاحظات: ' + trader.note + '</div>';
+                }
+                htmlStr += '</div>';
+
+                // أزرار التحكم
+                htmlStr += '<div class="flex gap-2 justify-end">';
+                htmlStr += '<button onclick="handleCallClick(\'' + trader.id + '\')" class="w-10 h-10 rounded-full bg-green-50 text-green-600 hover:bg-green-100 flex items-center justify-center transition-colors shadow-sm"><i class="fas fa-phone"></i></button>';
+                htmlStr += '<button onclick="openTraderModal(\'' + trader.id + '\')" class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors shadow-sm"><i class="fas fa-pen"></i></button>';
+                
+                if(isAdmin) {
+                    htmlStr += '<button onclick="openDeleteModal(\'' + trader.id + '\', \'' + trader.trader_name + '\')" class="w-10 h-10 rounded-full bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors shadow-sm"><i class="fas fa-trash"></i></button>';
+                }
+                
+                htmlStr += '</div>';
+                htmlStr += '</div>';
+            }
+
+            if(count === 0) {
+                htmlStr = '<div class="text-center py-20 text-gray-400"><i class="fas fa-store-slash text-6xl mb-4"></i><h3 class="text-xl font-bold">لا يوجد تجار مطابقين لبحثك</h3></div>';
+            }
+
+            container.innerHTML = htmlStr;
+            totalCountEl.innerText = count;
+        }
+
+        // --- 3. مسح البحث ---
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            renderTraders();
+        }
+
+        // --- 4. التحكم بالنوافذ المنبثقة (Modals) ---
+        function openModal(id) { document.getElementById(id).classList.remove('hidden-element'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden-element'); }
+
+        // نافذة الإضافة/التعديل
+        function openTraderModal(id) {
+            let titleEl = document.getElementById('modal-title');
+            let idInput = document.getElementById('trader-id');
+            let nameInput = document.getElementById('trader-name');
+            let primInput = document.getElementById('trader-primary');
+            let secInput = document.getElementById('trader-secondary');
+            let locInput = document.getElementById('trader-location');
+            let empInput = document.getElementById('trader-emp');
+            let noteInput = document.getElementById('trader-note');
+
+            if (id) {
+                // وضع التعديل
+                titleEl.innerText = "تعديل بيانات التاجر";
+                for (let i = 0; i < tradersData.length; i++) {
+                    if (tradersData[i].id === id) {
+                        let t = tradersData[i];
+                        idInput.value = t.id;
+                        nameInput.value = t.trader_name;
+                        primInput.value = t.primary_number;
+                        secInput.value = t.secondary_number;
+                        locInput.value = t.location;
+                        empInput.value = t.name;
+                        noteInput.value = t.note;
+                        break;
+                    }
+                }
+            } else {
+                // وضع الإضافة
+                titleEl.innerText = "إضافة تاجر جديد";
+                idInput.value = "";
+                nameInput.value = "";
+                primInput.value = "";
+                secInput.value = "";
+                locInput.value = "";
+                empInput.value = "";
+                noteInput.value = "";
+            }
+            openModal('trader-modal');
+        }
+
+        // حفظ التاجر
+        function saveTrader() {
+            let id = document.getElementById('trader-id').value;
+            let name = document.getElementById('trader-name').value.trim();
+            let primary = document.getElementById('trader-primary').value.trim();
+            
+            if(!name || !primary) {
+                alert("يرجى تعبئة الحقول الإجبارية (الاسم والرقم الأساسي)");
+                return;
+            }
+
+            let newTrader = {
+                id: id || "TR-" + Date.now(),
+                trader_name: name,
+                primary_number: primary,
+                secondary_number: document.getElementById('trader-secondary').value.trim(),
+                location: document.getElementById('trader-location').value.trim(),
+                name: document.getElementById('trader-emp').value.trim(),
+                note: document.getElementById('trader-note').value.trim()
+            };
+
+            if (id) {
+                for (let i = 0; i < tradersData.length; i++) {
+                    if (tradersData[i].id === id) tradersData[i] = newTrader;
+                }
+            } else {
+                tradersData.unshift(newTrader);
+            }
+
+            closeModal('trader-modal');
+            renderTraders();
+            showToast("تم حفظ بيانات التاجر بنجاح");
+        }
+
+        // نافذة الحذف
+        function openDeleteModal(id, name) {
+            traderToDeleteId = id;
+            document.getElementById('delete-message').innerText = "هل أنت متأكد من حذف التاجر '" + name + "'؟";
+            document.getElementById('confirm-delete-btn').onclick = executeDelete;
+            openModal('delete-modal');
+        }
+
+        function executeDelete() {
+            for (let i = 0; i < tradersData.length; i++) {
+                if (tradersData[i].id === traderToDeleteId) {
+                    tradersData.splice(i, 1);
+                    break;
+                }
+            }
+            closeModal('delete-modal');
+            renderTraders();
+            showToast("تم الحذف بنجاح");
+        }
+
+        // --- 5. الاتصال ونسخ الرقم ---
+        function handleCallClick(id) {
+            let trader = null;
+            for (let i = 0; i < tradersData.length; i++) {
+                if (tradersData[i].id === id) trader = tradersData[i];
+            }
+            if(!trader) return;
+
+            if (trader.secondary_number) {
+                // فتح نافذة الاختيار إذا كان هناك رقمان
+                document.getElementById('call-primary-text').innerText = trader.primary_number;
+                document.getElementById('call-secondary-text').innerText = trader.secondary_number;
+                
+                document.getElementById('call-primary-btn').onclick = function() { copyAndDial(trader.primary_number); };
+                document.getElementById('call-secondary-btn').onclick = function() { copyAndDial(trader.secondary_number); };
+                
+                openModal('call-modal');
+            } else {
+                // الاتصال المباشر إذا كان هناك رقم واحد
+                copyAndDial(trader.primary_number);
+            }
+        }
+
+        function copyAndDial(number) {
+            closeModal('call-modal');
+            
+            // نسخ الرقم للحافظة (Clipboard)
+            navigator.clipboard.writeText(number).then(function() {
+                showToast("تم نسخ الرقم: " + number);
+                // محاكاة فتح تطبيق الاتصال
+                setTimeout(function(){
+                    window.location.href = "tel:" + number;
+                }, 500);
+            }).catch(function() {
+                // في حال فشل النسخ (بعض المتصفحات تمنعها بدون SSL)، ننتقل للاتصال مباشرة
+                window.location.href = "tel:" + number;
+            });
+        }
+
+        // إشعار التنبيه الصغير (Toast)
+        function showToast(message) {
+            let toast = document.getElementById('toast-message');
+            document.getElementById('toast-text').innerText = message;
+            toast.classList.remove('hidden-element');
+            setTimeout(function() {
+                toast.classList.add('hidden-element');
+            }, 3000);
+        }
+
+        // التهيئة الأولى
+        window.onload = renderTraders;
+    </script>
+</body>
+</html>
