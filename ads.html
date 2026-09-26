@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الإعلانات | Souq app</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+        .hidden-element { display: none !important; }
+        /* تصميم مخصص للنافذة المنبثقة */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex h-screen overflow-hidden">
+
+    <!-- القائمة الجانبية (Sidebar) -->
+    <aside class="w-64 bg-gray-900 text-white flex flex-col shrink-0 shadow-lg z-20">
+        <div class="h-16 flex items-center justify-center font-black text-2xl bg-gray-950 border-b border-gray-800">
+            Souq app
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <a href="dashboard.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">الرئيسية</a>
+            <a href="orders.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الطلبات</a>
+            <a href="reports.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">التقارير والإحصائيات</a>
+            <!-- الزر النشط الآن هو إدارة الإعلانات -->
+            <a href="ads.html" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">إدارة الإعلانات</a>
+            <a href="#" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">المنتجات</a>
+            <a href="#" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">العملاء</a>
+        </nav>
+        <div class="p-4 border-t border-gray-800">
+            <button class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">
+                تسجيل الخروج
+            </button>
+        </div>
+    </aside>
+
+    <!-- منطقة المحتوى الرئيسية -->
+    <div class="flex-1 flex flex-col overflow-hidden relative">
+        
+        <header class="h-16 bg-white shadow-sm flex items-center justify-between px-8 shrink-0 z-10 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800">إدارة الإعلانات</h2>
+            <div class="flex items-center gap-6">
+                <button onclick="renderAds()" class="text-blue-600 hover:text-blue-800 font-bold transition flex items-center gap-2">
+                    <i class="fas fa-sync-alt"></i> تحديث البيانات
+                </button>
+                <div class="h-8 w-px bg-gray-200"></div>
+                <div class="text-sm font-semibold text-gray-600 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">M</div>
+                    مدير النظام
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto bg-gray-50 flex flex-col relative">
+            
+            <!-- التبويبات -->
+            <div class="flex bg-white px-4 border-b border-gray-200 sticky top-0 z-10 shadow-sm" id="tabsContainer">
+                <button id="btn-tab-commercial" onclick="switchTab('commercial')" class="px-8 py-4 font-bold border-b-4 border-[#0D1B6D] text-[#0D1B6D] transition-colors">التجارية</button>
+                <button id="btn-tab-public" onclick="switchTab('public')" class="px-8 py-4 font-bold border-b-4 border-transparent text-gray-500 hover:text-gray-800 transition-colors">العامة (إشعارات)</button>
+            </div>
+
+            <div class="p-6 max-w-7xl w-full mx-auto">
+                
+                <!-- شريط البحث والإحصائيات وزر الإضافة -->
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex-1 w-full relative">
+                        <i class="fas fa-search absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="search-input" onkeyup="renderAds()" placeholder="بحث باسم الإعلان..." class="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block pr-12 p-3 outline-none transition-colors">
+                    </div>
+                    
+                    <div class="flex gap-4 w-full md:w-auto">
+                        <div class="bg-[#0D1B6D] text-white px-6 py-2 rounded-lg shadow-md flex flex-col items-center justify-center min-w-[100px]">
+                            <span class="text-xs text-gray-300 font-semibold mb-1">الإجمالي</span>
+                            <span id="total-count" class="text-xl font-black">0</span>
+                        </div>
+                        
+                        <button onclick="openAddModal()" class="bg-[#4CAF50] hover:bg-green-600 text-white font-bold px-6 py-2 rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 w-full md:w-auto">
+                            <i class="fas fa-plus"></i> <span id="add-btn-text">إضافة إعلان تجاري</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- حاوية الإعلانات -->
+                <div id="adsContainer" class="space-y-4 pb-20"></div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ======================= النوافذ المنبثقة (Modals) ======================= -->
+
+    <!-- نافذة الإعلان التجاري -->
+    <div id="commercial-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
+                <h3 id="commercial-modal-title" class="text-xl font-bold text-[#0D1B6D]">إضافة إعلان تجاري</h3>
+                <button onclick="closeModal('commercial-modal')" class="text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="comm-id">
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">اسم الإعلان (مثلاً: شركة العليمي)</label>
+                    <input type="text" id="comm-name" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">النص الظاهر (Title)</label>
+                    <input type="text" id="comm-title" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">صورة الإعلان</label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer relative" onclick="document.getElementById('comm-image').click()">
+                        <input type="file" id="comm-image" class="hidden" accept="image/*">
+                        <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                        <p class="text-sm text-gray-500">اضغط لاختيار صورة الإعلان</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">تاريخ ووقت البدء</label>
+                        <input type="datetime-local" id="comm-start" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">تاريخ ووقت الانتهاء</label>
+                        <input type="datetime-local" id="comm-end" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">نوع الإجراء (مثال: open_url)</label>
+                        <input type="text" id="comm-action" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">الأولوية (الترتيب)</label>
+                        <input type="number" id="comm-priority" value="0" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">الرابط المستهدف (إن وجد)</label>
+                    <input type="url" id="comm-url" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500 text-left" dir="ltr">
+                </div>
+
+                <div class="flex items-center gap-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <input type="checkbox" id="comm-active" checked class="w-5 h-5 text-green-600 rounded focus:ring-green-500 cursor-pointer">
+                    <label for="comm-active" class="font-bold text-gray-800 cursor-pointer">تفعيل الإعلان يظهر للعملاء</label>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 rounded-b-2xl sticky bottom-0">
+                <button onclick="closeModal('commercial-modal')" class="px-6 py-2.5 text-gray-600 font-bold hover:bg-gray-200 rounded-lg transition-colors">إلغاء</button>
+                <button onclick="saveCommercialAd()" class="px-8 py-2.5 bg-[#0D1B6D] text-white font-bold rounded-lg shadow-md hover:bg-blue-900 transition-colors">حفظ الإعلان</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة الإعلان العام (الإشعارات) -->
+    <div id="public-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto flex flex-col">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
+                <h3 class="text-xl font-bold text-[#0D1B6D]">إرسال إشعار عام / إعلان</h3>
+                <button onclick="closeModal('public-modal')" class="text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">العنوان</label>
+                    <input type="text" id="pub-title" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">الرسالة</label>
+                    <textarea id="pub-message" rows="4" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500 resize-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">الفئة المستهدفة:</label>
+                    <div class="flex gap-6 mb-3">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="pub-category" value="all" checked onchange="togglePhoneInput(false)" class="w-4 h-4 text-blue-600">
+                            <span>الكل (إشعار عام)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="pub-category" value="specific" onchange="togglePhoneInput(true)" class="w-4 h-4 text-blue-600">
+                            <span>مستخدم محدد</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="pub-phone-container" class="hidden-element">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">رقم الهاتف المستهدف</label>
+                    <input type="tel" id="pub-phone" placeholder="777XXXXXX" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500 text-left" dir="ltr">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">تاريخ ووقت الانتهاء (يُمسح بعده)</label>
+                    <input type="datetime-local" id="pub-end" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 rounded-b-2xl sticky bottom-0">
+                <button onclick="closeModal('public-modal')" class="px-6 py-2.5 text-gray-600 font-bold hover:bg-gray-200 rounded-lg transition-colors">إلغاء</button>
+                <button onclick="savePublicAd()" class="px-8 py-2.5 bg-[#0D1B6D] text-white font-bold rounded-lg shadow-md hover:bg-blue-900 transition-colors"><i class="fas fa-paper-plane ml-2"></i> إرسال</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة تأكيد الحذف -->
+    <div id="delete-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-triangle text-3xl text-red-600"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">تأكيد الحذف</h3>
+            <p class="text-gray-500 mb-6">هل أنت متأكد من رغبتك في حذف هذا الإعلان نهائياً؟</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeModal('delete-modal')" class="flex-1 px-4 py-2 text-gray-600 font-bold bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">إلغاء</button>
+                <button id="confirm-delete-btn" class="flex-1 px-4 py-2 bg-red-600 text-white font-bold hover:bg-red-700 rounded-lg transition-colors">حذف</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. البيانات الوهمية للمحاكاة ---
+        let currentTab = 'commercial';
+        let itemToDelete = { type: '', id: '' };
+
+        let commercialAds = [
+            { ad_id: "AD-1", name: "شركة العليمي", title: "خصم 20% على قطع الغيار", image_url: "https://via.placeholder.com/600x200?text=Ad+Banner", click_action_type: "open_url", target_url: "https://example.com", start_date: "2023-11-01T08:00", end_date: "2023-12-01T23:59", priority: 1, is_active: true },
+            { ad_id: "AD-2", name: "زيوت بترومين", title: "تغيير الزيت مجاناً", image_url: "", click_action_type: "none", target_url: "", start_date: "2023-10-15T10:00", end_date: "2023-10-30T10:00", priority: 0, is_active: false }
+        ];
+
+        let publicAds = [
+            { doc_id: "PUB-1", title: "تحديث النظام", message: "سيتم إيقاف التطبيق للصيانة لمدة ساعة.", category: "all", phone_number: "", create_date: "2023-10-20 10:00 AM", end_date: "2023-10-21T10:00" },
+            { doc_id: "PUB-2", title: "فاتورة متأخرة", message: "يرجى سداد الفاتورة المعلقة لتجنب الإيقاف.", category: "specific", phone_number: "+967777123456", create_date: "2023-10-22 02:30 PM", end_date: "2023-11-01T00:00" }
+        ];
+
+        // --- 2. التحكم بالتبويبات ---
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            let btnComm = document.getElementById('btn-tab-commercial');
+            let btnPub = document.getElementById('btn-tab-public');
+            let searchInput = document.getElementById('search-input');
+            let addBtnText = document.getElementById('add-btn-text');
+            
+            let activeClass = "border-[#0D1B6D] text-[#0D1B6D]";
+            let inactiveClass = "border-transparent text-gray-500 hover:text-gray-800";
+
+            if(tab === 'commercial') {
+                btnComm.className = "px-8 py-4 font-bold border-b-4 transition-colors " + activeClass;
+                btnPub.className = "px-8 py-4 font-bold border-b-4 transition-colors " + inactiveClass;
+                searchInput.placeholder = "بحث باسم الإعلان...";
+                addBtnText.innerText = "إضافة إعلان تجاري";
+            } else {
+                btnPub.className = "px-8 py-4 font-bold border-b-4 transition-colors " + activeClass;
+                btnComm.className = "px-8 py-4 font-bold border-b-4 transition-colors " + inactiveClass;
+                searchInput.placeholder = "بحث بالعنوان...";
+                addBtnText.innerText = "إضافة إشعار عام";
+            }
+            
+            searchInput.value = ''; // تصفير البحث عند التبديل
+            renderAds();
+        }
+
+        // --- 3. رسم الإعلانات (بدون Template Literals لحماية الكود) ---
+        function renderAds() {
+            let container = document.getElementById('adsContainer');
+            let query = document.getElementById('search-input').value.toLowerCase();
+            let totalCountEl = document.getElementById('total-count');
+            
+            let htmlStr = '';
+            let count = 0;
+
+            if (currentTab === 'commercial') {
+                for (let i = 0; i < commercialAds.length; i++) {
+                    let ad = commercialAds[i];
+                    if (query && !ad.name.toLowerCase().includes(query)) continue;
+                    
+                    count++;
+                    let imgHtml = ad.image_url ? '<img src="' + ad.image_url + '" class="w-full h-32 object-cover rounded-t-xl">' : '<div class="w-full h-32 bg-gray-200 rounded-t-xl flex items-center justify-center text-gray-400"><i class="fas fa-image text-3xl"></i></div>';
+                    let activeColor = ad.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+                    let activeText = ad.is_active ? 'يظهر للعملاء' : 'موقوف';
+                    let switchChecked = ad.is_active ? 'checked' : '';
+
+                    htmlStr += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">';
+                    htmlStr += imgHtml;
+                    htmlStr += '<div class="p-5">';
+                    htmlStr += '<div class="flex justify-between items-start mb-3">';
+                    htmlStr += '<div>';
+                    htmlStr += '<h3 class="text-lg font-bold text-[#0D1B6D]">اسم الإعلان: ' + (ad.name || 'بدون اسم') + '</h3>';
+                    htmlStr += '<p class="text-gray-600 font-semibold">' + ad.title + '</p>';
+                    htmlStr += '</div>';
+                    htmlStr += '<div class="flex gap-2">';
+                    htmlStr += '<button onclick="openEditCommercial(\'' + ad.ad_id + '\')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"><i class="fas fa-pen text-sm"></i></button>';
+                    htmlStr += '<button onclick="openDeleteModal(\'commercial\', \'' + ad.ad_id + '\')" class="w-8 h-8 rounded-full bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors"><i class="fas fa-trash text-sm"></i></button>';
+                    htmlStr += '</div>';
+                    htmlStr += '</div>';
+                    
+                    htmlStr += '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">';
+                    htmlStr += '<div><span class="text-gray-500 block text-xs">يبدأ</span><span class="text-green-700 font-bold" dir="ltr">' + (ad.start_date.replace('T', ' ') || 'غير محدد') + '</span></div>';
+                    htmlStr += '<div><span class="text-gray-500 block text-xs">ينتهي</span><span class="text-red-600 font-bold" dir="ltr">' + (ad.end_date.replace('T', ' ') || 'غير محدد') + '</span></div>';
+                    htmlStr += '<div><span class="text-gray-500 block text-xs">الأولوية</span><span class="font-bold">' + ad.priority + '</span></div>';
+                    htmlStr += '<div><span class="text-gray-500 block text-xs">الرابط</span><a href="' + (ad.target_url || '#') + '" target="_blank" class="text-blue-500 hover:underline truncate block" dir="ltr">' + (ad.target_url || 'لا يوجد') + '</a></div>';
+                    htmlStr += '</div>';
+
+                    htmlStr += '<div class="flex justify-between items-center pt-4 border-t border-gray-100">';
+                    htmlStr += '<div class="flex items-center gap-3">';
+                    htmlStr += '<span class="font-bold text-gray-700">تفعيل:</span>';
+                    htmlStr += '<label class="relative inline-flex items-center cursor-pointer">';
+                    htmlStr += '<input type="checkbox" ' + switchChecked + ' onchange="toggleStatus(\'' + ad.ad_id + '\')" class="sr-only peer">';
+                    htmlStr += '<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[\'\'] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#4CAF50]"></div>';
+                    htmlStr += '</label>';
+                    htmlStr += '</div>';
+                    htmlStr += '<span class="px-3 py-1 rounded font-bold text-xs ' + activeColor + '">' + activeText + '</span>';
+                    htmlStr += '</div>';
+                    htmlStr += '</div></div>';
+                }
+            } else {
+                for (let j = 0; j < publicAds.length; j++) {
+                    let pub = publicAds[j];
+                    if (query && !pub.title.toLowerCase().includes(query)) continue;
+                    
+                    count++;
+                    let catText = pub.category === 'all' ? 'للجميع (إشعار عام)' : 'لمستخدم محدد (' + pub.phone_number + ')';
+
+                    htmlStr += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow p-5">';
+                    htmlStr += '<div class="flex justify-between items-start">';
+                    htmlStr += '<div class="flex-1">';
+                    htmlStr += '<h3 class="text-lg font-bold text-[#0D1B6D] mb-2">' + pub.title + '</h3>';
+                    htmlStr += '<p class="text-gray-700 mb-4">' + pub.message + '</p>';
+                    htmlStr += '<div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">';
+                    htmlStr += '<div><i class="fas fa-bullseye text-blue-400 ml-1"></i> <span class="text-gray-500">الفئة:</span> <span class="font-bold">' + catText + '</span></div>';
+                    htmlStr += '<div><i class="fas fa-calendar-plus text-gray-400 ml-1"></i> <span class="text-gray-500">الإنشاء:</span> <span class="font-bold" dir="ltr">' + pub.create_date + '</span></div>';
+                    htmlStr += '<div><i class="fas fa-calendar-times text-red-400 ml-1"></i> <span class="text-gray-500">الانتهاء:</span> <span class="text-red-600 font-bold" dir="ltr">' + (pub.end_date.replace('T', ' ') || 'دائم') + '</span></div>';
+                    htmlStr += '</div>';
+                    htmlStr += '</div>';
+                    htmlStr += '<button onclick="openDeleteModal(\'public\', \'' + pub.doc_id + '\')" class="w-10 h-10 rounded-full bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors shrink-0 mr-4"><i class="fas fa-trash"></i></button>';
+                    htmlStr += '</div></div>';
+                }
+            }
+
+            if(count === 0) {
+                htmlStr = '<div class="text-center py-20 text-gray-400"><i class="fas fa-folder-open text-6xl mb-4"></i><h3 class="text-xl font-bold">لا توجد إعلانات مطابقة</h3></div>';
+            }
+
+            container.innerHTML = htmlStr;
+            totalCountEl.innerText = count;
+        }
+
+        // --- 4. التحكم بالنوافذ المنبثقة ---
+        function openModal(id) { document.getElementById(id).classList.remove('hidden-element'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden-element'); }
+
+        function openAddModal() {
+            if (currentTab === 'commercial') {
+                // تصفير الحقول
+                document.getElementById('commercial-modal-title').innerText = "إضافة إعلان تجاري";
+                document.getElementById('comm-id').value = "";
+                document.getElementById('comm-name').value = "";
+                document.getElementById('comm-title').value = "";
+                document.getElementById('comm-start').value = "";
+                document.getElementById('comm-end').value = "";
+                document.getElementById('comm-action').value = "open_url";
+                document.getElementById('comm-priority').value = "0";
+                document.getElementById('comm-url').value = "";
+                document.getElementById('comm-active').checked = true;
+                openModal('commercial-modal');
+            } else {
+                document.getElementById('pub-title').value = "";
+                document.getElementById('pub-message').value = "";
+                document.getElementById('pub-end').value = "";
+                document.querySelector('input[name="pub-category"][value="all"]').checked = true;
+                togglePhoneInput(false);
+                document.getElementById('pub-phone').value = "";
+                openModal('public-modal');
+            }
+        }
+
+        function togglePhoneInput(show) {
+            let container = document.getElementById('pub-phone-container');
+            if(show) container.classList.remove('hidden-element');
+            else container.classList.add('hidden-element');
+        }
+
+        function openEditCommercial(id) {
+            let ad = null;
+            for(let i=0; i<commercialAds.length; i++) {
+                if(commercialAds[i].ad_id === id) ad = commercialAds[i];
+            }
+            if(!ad) return;
+
+            document.getElementById('commercial-modal-title').innerText = "تعديل الإعلان";
+            document.getElementById('comm-id').value = ad.ad_id;
+            document.getElementById('comm-name').value = ad.name;
+            document.getElementById('comm-title').value = ad.title;
+            document.getElementById('comm-start').value = ad.start_date;
+            document.getElementById('comm-end').value = ad.end_date;
+            document.getElementById('comm-action').value = ad.click_action_type;
+            document.getElementById('comm-priority').value = ad.priority;
+            document.getElementById('comm-url').value = ad.target_url;
+            document.getElementById('comm-active').checked = ad.is_active;
+
+            openModal('commercial-modal');
+        }
+
+        // --- 5. العمليات (حفظ وتعديل وحذف) ---
+        function saveCommercialAd() {
+            let id = document.getElementById('comm-id').value;
+            let ad = {
+                ad_id: id || "AD-" + Date.now(),
+                name: document.getElementById('comm-name').value,
+                title: document.getElementById('comm-title').value,
+                image_url: "", // محاكاة لرفع الصورة
+                start_date: document.getElementById('comm-start').value,
+                end_date: document.getElementById('comm-end').value,
+                click_action_type: document.getElementById('comm-action').value,
+                priority: parseInt(document.getElementById('comm-priority').value) || 0,
+                target_url: document.getElementById('comm-url').value,
+                is_active: document.getElementById('comm-active').checked
+            };
+
+            if(id) {
+                // تعديل
+                for(let i=0; i<commercialAds.length; i++) {
+                    if(commercialAds[i].ad_id === id) commercialAds[i] = ad;
+                }
+            } else {
+                // إضافة
+                commercialAds.unshift(ad);
+            }
+
+            closeModal('commercial-modal');
+            renderAds();
+        }
+
+        function savePublicAd() {
+            let category = document.querySelector('input[name="pub-category"]:checked').value;
+            let pub = {
+                doc_id: "PUB-" + Date.now(),
+                title: document.getElementById('pub-title').value,
+                message: document.getElementById('pub-message').value,
+                category: category,
+                phone_number: category === 'specific' ? document.getElementById('pub-phone').value : "",
+                end_date: document.getElementById('pub-end').value,
+                create_date: new Date().toLocaleString()
+            };
+
+            publicAds.unshift(pub);
+            closeModal('public-modal');
+            renderAds();
+        }
+
+        function toggleStatus(id) {
+            for(let i=0; i<commercialAds.length; i++) {
+                if(commercialAds[i].ad_id === id) {
+                    commercialAds[i].is_active = !commercialAds[i].is_active;
+                }
+            }
+            renderAds();
+        }
+
+        function openDeleteModal(type, id) {
+            itemToDelete = { type: type, id: id };
+            document.getElementById('confirm-delete-btn').onclick = executeDelete;
+            openModal('delete-modal');
+        }
+
+        function executeDelete() {
+            if (itemToDelete.type === 'commercial') {
+                for(let i=0; i<commercialAds.length; i++) {
+                    if(commercialAds[i].ad_id === itemToDelete.id) {
+                        commercialAds.splice(i, 1);
+                        break;
+                    }
+                }
+            } else {
+                for(let j=0; j<publicAds.length; j++) {
+                    if(publicAds[j].doc_id === itemToDelete.id) {
+                        publicAds.splice(j, 1);
+                        break;
+                    }
+                }
+            }
+            closeModal('delete-modal');
+            renderAds();
+        }
+
+        // التهيئة الأولى
+        window.onload = renderAds;
+    </script>
+</body>
+</html>
