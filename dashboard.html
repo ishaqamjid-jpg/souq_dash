@@ -4,53 +4,170 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>الرئيسية | Souq app</title>
+    <!-- استدعاء Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- خط تجوال -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <!-- أيقونات FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         body { font-family: 'Tajawal', sans-serif; }
+        /* لتخصيص السكرول بار في القائمة الجانبية */
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-gray-100 flex h-screen overflow-hidden">
+<body class="bg-gray-50 flex h-screen overflow-hidden text-gray-800">
 
     <!-- القائمة الجانبية (Sidebar) -->
-    <aside class="w-64 bg-gray-800 text-white flex flex-col">
-        <div class="h-16 flex items-center justify-center font-bold text-2xl bg-gray-900">
+    <aside class="w-64 bg-gray-900 text-white flex flex-col shrink-0 shadow-xl z-20">
+        <div class="h-16 flex items-center justify-center font-black text-2xl bg-gray-950 border-b border-gray-800">
             Souq app
         </div>
-        <nav class="flex-1 px-4 py-6 space-y-2">
-            <!-- التعديل هنا: وضعنا روابط الملفات الحقيقية بدلاً من علامة # -->
-            <a href="dashboard.html" class="block px-4 py-2 bg-blue-600 rounded transition">الرئيسية</a>
-            <a href="orders.html" class="block px-4 py-2 hover:bg-gray-700 rounded transition">إدارة الطلبات</a>
-            <a href="#" class="block px-4 py-2 hover:bg-gray-700 rounded transition">المنتجات</a>
-            <a href="#" class="block px-4 py-2 hover:bg-gray-700 rounded transition">العملاء</a>
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+            <!-- الزر النشط الآن هو الرئيسية -->
+            <a href="dashboard.html" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">الرئيسية</a>
+            <a href="orders.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الطلبات</a>
+            <a href="reports.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">التقارير والإحصائيات</a>
+            <a href="ads.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الإعلانات</a>
+            <a href="trader.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة التجار</a>
+            <a href="clients.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">عملاء التطبيق</a>
+            <a href="constant.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الثوابت</a>
+            <a href="users.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">موظفو النظام</a>
+            <a href="quotations.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">فواتير سعر</a>
+            <a href="accounting.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">الحسابات والسندات</a>
+            <a href="setting.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium text-[#2196F3]"><i class="fas fa-cog ml-2"></i> الإعدادات</a>
         </nav>
-        <div class="p-4">
-            <button class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded transition">
+        <div class="p-4 border-t border-gray-800">
+            <button class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">
                 تسجيل الخروج
             </button>
         </div>
     </aside>
 
     <!-- منطقة المحتوى الرئيسية -->
-    <div class="flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col overflow-hidden relative">
         
         <!-- الشريط العلوي (Header) -->
-        <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6">
-            <h2 class="text-xl font-bold text-gray-800">مرحباً بك، مدير النظام</h2>
-            <div class="text-sm text-gray-500">اليوم: متصل</div>
+        <header class="h-16 bg-white shadow-sm flex items-center justify-between px-8 shrink-0 z-10 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800">لوحة التحكم الرئيسية</h2>
+            <div class="flex items-center gap-6">
+                <div class="text-sm font-bold text-gray-500" id="current-date">اليوم: متصل</div>
+                <div class="h-8 w-px bg-gray-200"></div>
+                <div class="text-sm font-semibold text-gray-600 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">M</div>
+                    مدير النظام
+                </div>
+            </div>
         </header>
 
         <!-- مساحة العمل -->
-        <main class="flex-1 p-6 overflow-y-auto">
-            <div class="bg-white p-6 rounded shadow-sm border border-gray-100">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">نظرة عامة على لوحة التحكم</h3>
-                <p class="text-gray-600 mb-4">
-                    هذا هو الهيكل الأساسي للوحة تحكم تطبيق Souq app. عندما تقوم بالضغط على "إدارة الطلبات" في القائمة الجانبية، ستتغير هذه المساحة لعرض جداول الطلبات والإجراءات الخاصة بها.
-                </p>
+        <main class="flex-1 overflow-y-auto p-6 relative">
+            <div class="max-w-7xl mx-auto space-y-6">
+                
+                <!-- رسالة ترحيبية -->
+                <div class="bg-gradient-to-l from-[#0D1B6D] to-blue-800 rounded-2xl p-8 text-white shadow-lg flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-black mb-2">مرحباً بك في إدارة تطبيق Souq app</h1>
+                        <p class="text-blue-100">نظرة عامة على أداء النظام وإحصائياته السريعة. اختر من القائمة الجانبية للبدء بإدارة العمليات.</p>
+                    </div>
+                    <div class="hidden md:block">
+                        <i class="fas fa-chart-line text-7xl opacity-20"></i>
+                    </div>
+                </div>
+
+                <!-- بطاقات الإحصائيات السريعة -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div class="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-2xl">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div>
+                            <div class="text-sm text-gray-500 font-bold mb-1">الطلبات المعلقة</div>
+                            <div class="text-2xl font-black text-gray-800">12</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div class="w-14 h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center text-2xl">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div>
+                            <div class="text-sm text-gray-500 font-bold mb-1">الطلبات المكتملة</div>
+                            <div class="text-2xl font-black text-gray-800">845</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div class="w-14 h-14 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-2xl">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div>
+                            <div class="text-sm text-gray-500 font-bold mb-1">إجمالي العملاء</div>
+                            <div class="text-2xl font-black text-gray-800">320</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
+                        <div class="w-14 h-14 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center text-2xl">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        <div>
+                            <div class="text-sm text-gray-500 font-bold mb-1">التجار المسجلين</div>
+                            <div class="text-2xl font-black text-gray-800">45</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- اختصارات سريعة -->
+                <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">الوصول السريع</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <a href="orders.html" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-[#0D1B6D] transition-colors group flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                                <i class="fas fa-box-open text-xl"></i>
+                            </div>
+                            <span class="font-bold text-gray-700 group-hover:text-[#0D1B6D] transition-colors">معالجة الطلبات الجديدة</span>
+                        </div>
+                        <i class="fas fa-chevron-left text-gray-300 group-hover:text-blue-600 transition-colors"></i>
+                    </a>
+
+                    <a href="accounting.html" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-green-600 transition-colors group flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-green-50 group-hover:text-green-600 transition-colors">
+                                <i class="fas fa-receipt text-xl"></i>
+                            </div>
+                            <span class="font-bold text-gray-700 group-hover:text-green-700 transition-colors">إضافة سند مالي</span>
+                        </div>
+                        <i class="fas fa-chevron-left text-gray-300 group-hover:text-green-600 transition-colors"></i>
+                    </a>
+
+                    <a href="ads.html" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-pink-600 transition-colors group flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-pink-50 group-hover:text-pink-600 transition-colors">
+                                <i class="fas fa-bullhorn text-xl"></i>
+                            </div>
+                            <span class="font-bold text-gray-700 group-hover:text-pink-700 transition-colors">إرسال إشعار للعملاء</span>
+                        </div>
+                        <i class="fas fa-chevron-left text-gray-300 group-hover:text-pink-600 transition-colors"></i>
+                    </a>
+                </div>
+
             </div>
         </main>
         
     </div>
 
+    <script>
+        // إعداد التاريخ الحالي في الشريط العلوي
+        window.onload = function() {
+            let options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            let today = new Date().toLocaleDateString('ar-EG', options);
+            document.getElementById('current-date').innerText = "اليوم: " + today;
+        };
+    </script>
 </body>
 </html>
