@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة متقدمة | Souq app</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+        .hidden-element { display: none !important; }
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); }
+        .alarm-details { display: none; }
+        .alarm-details.open { display: block; }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-[#121212] flex h-screen overflow-hidden text-white">
+
+    <aside class="w-64 bg-gray-900 flex flex-col shrink-0 shadow-xl z-20">
+        <div class="h-16 flex items-center justify-center font-black text-2xl bg-gray-950 border-b border-gray-800">
+            Souq app
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar text-white">
+            <a href="dashboard.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg">الرئيسية</a>
+            <a href="setting.html" class="block px-4 py-3 bg-[#1E1E1E] border border-gray-700 rounded-lg font-bold text-[#E91E63]"><i class="fas fa-arrow-right ml-2 text-sm"></i> رجوع للإعدادات</a>
+        </nav>
+    </aside>
+
+    <div class="flex-1 flex flex-col overflow-hidden relative">
+        <header class="h-16 bg-[#1E1E1E] shadow-md flex items-center justify-between px-8 shrink-0 z-10 border-b border-gray-800">
+            <h2 class="text-xl font-bold">إدارة متقدمة للبيانات</h2>
+        </header>
+
+        <div class="flex bg-[#1E1E1E] px-4 border-b border-gray-800 sticky top-0 z-10 shadow-sm" id="tabsContainer">
+            <button id="btn-tab-orders" onclick="switchTab('orders')" class="px-8 py-4 font-bold border-b-4 border-[#E91E63] text-[#E91E63] transition-colors">إدارة الطلبات الجذري</button>
+            <button id="btn-tab-alarms" onclick="switchTab('alarms')" class="px-8 py-4 font-bold border-b-4 border-transparent text-gray-500 hover:text-white transition-colors">إدارة الإشعارات</button>
+        </div>
+
+        <main class="flex-1 overflow-y-auto p-6 relative">
+            
+            <!-- ================= التبويب الأول: الطلبات المتقدمة ================= -->
+            <div id="tab-orders" class="max-w-5xl mx-auto">
+                <div class="flex gap-4 mb-6">
+                    <div class="relative flex-1">
+                        <i class="fas fa-hashtag absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="number" id="search-order-input" placeholder="أدخل رقم الطلب (Order Number)" class="w-full bg-[#1E1E1E] border border-gray-700 text-white rounded-xl focus:ring-[#E91E63] focus:border-[#E91E63] block pr-12 p-4 outline-none text-left" dir="ltr">
+                    </div>
+                    <button onclick="searchOrder()" class="bg-[#E91E63] hover:bg-pink-600 text-white font-bold px-8 rounded-xl shadow-lg transition-colors">بحث <i class="fas fa-search ml-2"></i></button>
+                </div>
+
+                <div id="order-result-container">
+                    <!-- سيتم رسم تفاصيل الطلب الطويلة جداً هنا -->
+                    <div class="text-center py-20 text-gray-600"><i class="fas fa-search text-5xl mb-4 opacity-50"></i><p>ابحث برقم الطلب للبدء</p></div>
+                </div>
+            </div>
+
+            <!-- ================= التبويب الثاني: الإشعارات ================= -->
+            <div id="tab-alarms" class="max-w-5xl mx-auto hidden-element">
+                <div class="bg-[#1E1E1E] p-4 rounded-xl border border-gray-800 mb-6 flex justify-around">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="alarm-type" value="user_alarm" checked class="w-5 h-5 accent-[#E91E63]">
+                        <span class="font-bold text-white">إشعارات العملاء</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="alarm-type" value="admin_alarm" class="w-5 h-5 accent-[#E91E63]">
+                        <span class="font-bold text-white">إشعارات الإدارة</span>
+                    </label>
+                </div>
+
+                <button onclick="fetchAlarms()" class="w-full bg-[#E91E63] hover:bg-pink-600 text-white font-bold py-4 rounded-xl shadow-lg transition-colors mb-6 text-lg">بحث وجلب الإشعارات</button>
+
+                <div id="alarms-container" class="space-y-4"></div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- نافذة تأكيد الحذف (شاملة للطلبات والإشعارات) -->
+    <div id="delete-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-[#1E1E1E] text-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center border border-gray-700">
+            <div class="w-16 h-16 bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+                <i class="fas fa-trash-alt text-3xl"></i>
+            </div>
+            <h3 class="text-xl font-bold mb-2">تأكيد الحذف الجذري</h3>
+            <p class="text-gray-400 mb-6">تنبيه: سيتم حذف البيانات من قاعدة البيانات نهائياً.</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeModal('delete-modal')" class="flex-1 px-4 py-3 text-gray-300 font-bold bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">إلغاء</button>
+                <button id="confirm-delete-btn" class="flex-1 px-4 py-3 bg-red-600 text-white font-bold hover:bg-red-700 rounded-lg transition-colors">حذف نهائي</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-message" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-[#4CAF50] text-white px-6 py-3 rounded-xl shadow-lg hidden-element transition-opacity z-50 flex items-center gap-3">
+        <i class="fas fa-check-circle text-xl"></i> <span id="toast-text" class="font-bold"></span>
+    </div>
+
+    <script>
+        // --- بيانات وهمية للطلب المتقدم ---
+        let mockOrderData = {
+            order_id: "ORDER-ABC-123", order_number: 1005, user_id: "USR-001", client_phone: "777000111",
+            brand_name: "تويوتا", vehicle_name: "كامري", vehicle_model: "2020", manufacture: "اليابان",
+            vin_number: "VIN998877", location: "صنعاء", delivery_location: "حدة", delivery_fees: 1500,
+            order_status: "pending", approval_notes: "", disapproval_notes: "",
+            items: [
+                { item_id: "ITM-1", part_name: "فلتر زيت", quantity: 2, quality_type: "أصلي", description: "فلتر مكينة", comments: "", trader_name: "مؤسسة النور", invoice_number: "INV-11", purchase_price: 2000, selling_price: 2500 }
+            ]
+        };
+
+        let userAlarms = [
+            { alarm_id: "ALR-U-1", title: "تم التوصيل", message: "طلبك رقم 1001 جاهز", receiver_id: "USR-001", order_number: 1001, fcm_token: "tok1", type: "order", isRead: true }
+        ];
+
+        let adminAlarms = [
+            { alarm_id: "ALR-A-1", title: "طلب جديد", message: "تم إنشاء طلب 1005", order_number: 1005, fcm_token: "", isRead: false }
+        ];
+
+        let deleteTarget = { type: '', id: '' };
+
+        function switchTab(tab) {
+            let tOrders = document.getElementById('tab-orders');
+            let tAlarms = document.getElementById('tab-alarms');
+            let bOrders = document.getElementById('btn-tab-orders');
+            let bAlarms = document.getElementById('btn-tab-alarms');
+            
+            let active = "border-[#E91E63] text-[#E91E63]";
+            let inactive = "border-transparent text-gray-500 hover:text-white";
+
+            if (tab === 'orders') {
+                tOrders.classList.remove('hidden-element'); tAlarms.classList.add('hidden-element');
+                bOrders.className = "px-8 py-4 font-bold border-b-4 transition-colors " + active;
+                bAlarms.className = "px-8 py-4 font-bold border-b-4 transition-colors " + inactive;
+            } else {
+                tAlarms.classList.remove('hidden-element'); tOrders.classList.add('hidden-element');
+                bAlarms.className = "px-8 py-4 font-bold border-b-4 transition-colors " + active;
+                bOrders.className = "px-8 py-4 font-bold border-b-4 transition-colors " + inactive;
+            }
+        }
+
+        // --- البحث عن الطلب وبناء واجهته الطويلة ---
+        function searchOrder() {
+            let num = document.getElementById('search-order-input').value;
+            let container = document.getElementById('order-result-container');
+            
+            if (num != "1005") { // محاكاة (يظهر النتيجة فقط إذا أدخلت 1005)
+                container.innerHTML = '<div class="text-center py-20 text-gray-600"><i class="fas fa-exclamation-circle text-5xl mb-4 opacity-50"></i><p>لا يوجد طلب بهذا الرقم</p></div>';
+                return;
+            }
+
+            let o = mockOrderData;
+            let htmlStr = '';
+
+            // معلومات أساسية
+            htmlStr += '<div class="bg-[#1E1E1E] rounded-xl p-6 border border-gray-800 mb-6">';
+            htmlStr += '<h3 class="text-white font-bold text-lg mb-4 border-b border-gray-700 pb-2">بيانات الطلب الأساسية:</h3>';
+            htmlStr += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">';
+            htmlStr += '<div><label class="block text-gray-500 text-xs mb-1">معرف الطلب (ID)</label><input type="text" value="' + o.order_id + '" readonly class="w-full bg-[#121212] border border-gray-700 text-gray-400 p-3 rounded-lg"></div>';
+            htmlStr += '<div><label class="block text-gray-500 text-xs mb-1">رقم الطلب (Number)</label><input type="text" value="' + o.order_number + '" readonly class="w-full bg-[#121212] border border-gray-700 text-gray-400 p-3 rounded-lg"></div>';
+            htmlStr += '<div><label class="block text-gray-500 text-xs mb-1">رقم هاتف العميل</label><input type="text" value="' + o.client_phone + '" readonly class="w-full bg-[#121212] border border-gray-700 text-gray-400 p-3 rounded-lg"></div>';
+            htmlStr += '<div><label class="block text-gray-500 text-xs mb-1">معرف المستخدم (User ID)</label><input type="text" value="' + o.user_id + '" readonly class="w-full bg-[#121212] border border-gray-700 text-gray-400 p-3 rounded-lg"></div>';
+            htmlStr += '</div>';
+
+            // حقول قابلة للتعديل
+            let tClass = "w-full bg-[#121212] border border-gray-700 text-white p-3 rounded-lg focus:border-[#E91E63] outline-none";
+            htmlStr += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
+            htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">الماركة</label><input type="text" id="adv-brand" value="' + o.brand_name + '" class="' + tClass + '"></div>';
+            htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">المركبة</label><input type="text" id="adv-vehicle" value="' + o.vehicle_name + '" class="' + tClass + '"></div>';
+            htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">الموديل</label><input type="text" id="adv-model" value="' + o.vehicle_model + '" class="' + tClass + '"></div>';
+            htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">بلد الصنع</label><input type="text" id="adv-manuf" value="' + o.manufacture + '" class="' + tClass + '"></div>';
+            htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">رقم القاعدة (VIN)</label><input type="text" id="adv-vin" value="' + o.vin_number + '" class="' + tClass + '"></div>';
+            htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">المحافظة</label><input type="text" id="adv-loc" value="' + o.location + '" class="' + tClass + '"></div>';
+            htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">العنوان</label><input type="text" id="adv-del-loc" value="' + o.delivery_location + '" class="' + tClass + '"></div>';
+            htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">رسوم التوصيل</label><input type="number" id="adv-fees" value="' + o.delivery_fees + '" class="' + tClass + '"></div>';
+            htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">حالة الطلب</label><input type="text" id="adv-status" value="' + o.order_status + '" class="' + tClass + '" dir="ltr"></div>';
+            htmlStr += '</div>';
+            htmlStr += '</div>';
+
+            // القطع التابعة للطلب
+            htmlStr += '<h3 class="text-white font-bold text-lg mb-4">القطع المطلوبة (' + o.items.length + ' قطع):</h3>';
+            for (let i = 0; i < o.items.length; i++) {
+                let itm = o.items[i];
+                htmlStr += '<div class="bg-[#2C2C2C] rounded-xl p-5 mb-4 border border-gray-700">';
+                htmlStr += '<div class="text-[#E91E63] font-bold mb-3">قطعة ' + (i+1) + ' (ID: ' + itm.item_id + ')</div>';
+                
+                htmlStr += '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">';
+                htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">اسم القطعة</label><input type="text" id="adv-itm-name-' + i + '" value="' + itm.part_name + '" class="' + tClass + '"></div>';
+                htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">الكمية</label><input type="number" id="adv-itm-qty-' + i + '" value="' + itm.quantity + '" class="' + tClass + '"></div>';
+                htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">الجودة</label><input type="text" id="adv-itm-qual-' + i + '" value="' + itm.quality_type + '" class="' + tClass + '"></div>';
+                htmlStr += '<div class="md:col-span-3"><label class="block text-gray-400 text-xs mb-1">الوصف</label><input type="text" id="adv-itm-desc-' + i + '" value="' + itm.description + '" class="' + tClass + '"></div>';
+                htmlStr += '</div>';
+                
+                htmlStr += '<div class="border-t border-gray-600 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">';
+                htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">اسم الموفر (التاجر)</label><input type="text" id="adv-itm-trader-' + i + '" value="' + itm.trader_name + '" class="' + tClass + '"></div>';
+                htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">رقم الفاتورة</label><input type="text" id="adv-itm-inv-' + i + '" value="' + itm.invoice_number + '" class="' + tClass + '"></div>';
+                htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">سعر الشراء</label><input type="number" id="adv-itm-buy-' + i + '" value="' + itm.purchase_price + '" class="' + tClass + '"></div>';
+                htmlStr += '<div><label class="block text-gray-400 text-xs mb-1">سعر البيع</label><input type="number" id="adv-itm-sell-' + i + '" value="' + itm.selling_price + '" class="' + tClass + '"></div>';
+                htmlStr += '</div>';
+                htmlStr += '</div>';
+            }
+
+            // أزرار الحفظ والحذف للطلب
+            htmlStr += '<div class="flex justify-between items-center mt-6 p-4 bg-[#1E1E1E] rounded-xl border border-gray-800">';
+            htmlStr += '<button onclick="openDeleteModal(\'order\', \'' + o.order_id + '\')" class="px-6 py-3 bg-red-900/30 text-red-500 hover:bg-red-600 hover:text-white font-bold rounded-lg transition-colors flex items-center gap-2"><i class="fas fa-trash"></i> حذف جذري</button>';
+            htmlStr += '<button onclick="saveOrderEdits()" class="px-10 py-3 bg-[#4CAF50] text-white font-bold rounded-lg shadow-lg hover:bg-green-600 transition-colors">حفظ التعديلات في السيرفر</button>';
+            htmlStr += '</div>';
+
+            container.innerHTML = htmlStr;
+        }
+
+        function saveOrderEdits() {
+            showToast("تم حفظ التعديلات على الطلب بنجاح");
+        }
+
+        // --- جلب وإدارة الإشعارات ---
+        function fetchAlarms() {
+            let type = document.querySelector('input[name="alarm-type"]:checked').value;
+            let container = document.getElementById('alarms-container');
+            let dataArray = type === 'user_alarm' ? userAlarms : adminAlarms;
+
+            let htmlStr = '';
+            for(let i=0; i<dataArray.length; i++) {
+                let a = dataArray[i];
+                let bgActive = a.isRead ? 'border-gray-700 text-gray-400' : 'border-[#E91E63] text-white';
+                let tClass = "w-full bg-[#121212] border border-gray-700 text-white p-3 rounded-lg focus:border-[#E91E63] outline-none mt-1";
+
+                htmlStr += '<div class="bg-[#1E1E1E] rounded-xl border ' + bgActive + ' overflow-hidden mb-4">';
+                htmlStr += '<div class="p-5 cursor-pointer flex justify-between items-center bg-black/20 hover:bg-black/40 transition-colors" onclick="toggleDetails(\'' + a.alarm_id + '\')">';
+                htmlStr += '<div><div class="font-bold text-lg">' + a.title + '</div><div class="text-sm opacity-70">رقم الطلب: ' + a.order_number + ' | مقروء: ' + (a.isRead ? 'نعم' : 'لا') + '</div></div>';
+                htmlStr += '<i id="icon-' + a.alarm_id + '" class="fas fa-chevron-down text-gray-500"></i>';
+                htmlStr += '</div>';
+
+                htmlStr += '<div id="details-' + a.alarm_id + '" class="alarm-details p-5 border-t border-gray-700">';
+                htmlStr += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">';
+                htmlStr += '<div><label class="text-xs text-gray-400">العنوان (Title)</label><input type="text" value="' + a.title + '" class="' + tClass + '"></div>';
+                htmlStr += '<div><label class="text-xs text-gray-400">رقم الطلب</label><input type="number" value="' + a.order_number + '" class="' + tClass + '"></div>';
+                htmlStr += '<div class="md:col-span-2"><label class="text-xs text-gray-400">الرسالة</label><input type="text" value="' + a.message + '" class="' + tClass + '"></div>';
+                if(type === 'user_alarm') {
+                    htmlStr += '<div><label class="text-xs text-gray-400">نوع الإشعار (type)</label><input type="text" value="' + a.type + '" class="' + tClass + '"></div>';
+                    htmlStr += '<div><label class="text-xs text-gray-400">معرف المستلم</label><input type="text" value="' + a.receiver_id + '" class="' + tClass + '"></div>';
+                }
+                htmlStr += '<div class="md:col-span-2"><label class="text-xs text-gray-400">FCM Token</label><input type="text" value="' + a.fcm_token + '" class="' + tClass + '"></div>';
+                htmlStr += '</div>';
+
+                htmlStr += '<div class="flex justify-between items-center mt-4">';
+                htmlStr += '<button onclick="openDeleteModal(\'alarm\', \'' + a.alarm_id + '\')" class="px-4 py-2 bg-red-900/30 text-red-500 rounded"><i class="fas fa-trash"></i> حذف</button>';
+                htmlStr += '<button onclick="saveAlarmEdits()" class="px-6 py-2 bg-[#2196F3] text-white font-bold rounded shadow">حفظ التعديل</button>';
+                htmlStr += '</div>';
+                htmlStr += '</div></div>';
+            }
+            container.innerHTML = htmlStr;
+        }
+
+        function toggleDetails(id) {
+            let details = document.getElementById('details-' + id);
+            let icon = document.getElementById('icon-' + id);
+            if(details.classList.contains('open')) {
+                details.classList.remove('open'); icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+            } else {
+                details.classList.add('open'); icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            }
+        }
+
+        function saveAlarmEdits() { showToast("تم تحديث بيانات الإشعار"); }
+
+        // --- نوافذ الحذف ---
+        function openModal(id) { document.getElementById(id).classList.remove('hidden-element'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden-element'); }
+
+        function openDeleteModal(type, id) {
+            deleteTarget = { type: type, id: id };
+            openModal('delete-modal');
+        }
+
+        document.getElementById('confirm-delete-btn').onclick = function() {
+            closeModal('delete-modal');
+            if(deleteTarget.type === 'order') {
+                document.getElementById('order-result-container').innerHTML = '<div class="text-center py-20 text-green-500"><i class="fas fa-check-circle text-5xl mb-4"></i><p>تم الحذف بنجاح</p></div>';
+            } else {
+                fetchAlarms();
+            }
+            showToast("تم الحذف من قاعدة البيانات");
+        };
+
+        function showToast(message) {
+            let toast = document.getElementById('toast-message');
+            document.getElementById('toast-text').innerText = message;
+            toast.classList.remove('hidden-element');
+            setTimeout(function() { toast.classList.add('hidden-element'); }, 3000);
+        }
+    </script>
+</body>
+</html>
