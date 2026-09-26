@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة موظفي النظام | Souq app</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+        .hidden-element { display: none !important; }
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); }
+        /* زر الإضافة العائم */
+        .fab-button {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            z-index: 40;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex h-screen overflow-hidden">
+
+    <!-- القائمة الجانبية (Sidebar) -->
+    <aside class="w-64 bg-gray-900 text-white flex flex-col shrink-0 shadow-lg z-20">
+        <div class="h-16 flex items-center justify-center font-black text-2xl bg-gray-950 border-b border-gray-800">
+            Souq app
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+            <a href="dashboard.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">الرئيسية</a>
+            <a href="orders.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الطلبات</a>
+            <a href="reports.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">التقارير والإحصائيات</a>
+            <a href="ads.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الإعلانات</a>
+            <a href="trader.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة التجار</a>
+            <a href="clients.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">عملاء التطبيق</a>
+            <a href="constant.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الثوابت</a>
+            <!-- الزر النشط الآن هو موظفو النظام -->
+            <a href="users.html" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">موظفو النظام</a>
+        </nav>
+        <div class="p-4 border-t border-gray-800">
+            <button class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">
+                تسجيل الخروج
+            </button>
+        </div>
+    </aside>
+
+    <!-- منطقة المحتوى الرئيسية -->
+    <div class="flex-1 flex flex-col overflow-hidden relative">
+        
+        <header class="h-16 bg-[#0D1B6D] text-white shadow-sm flex items-center justify-between px-8 shrink-0 z-10">
+            <h2 class="text-xl font-bold">إدارة موظفي النظام</h2>
+            <div class="flex items-center gap-6">
+                <button onclick="renderUsers()" class="text-white hover:text-gray-200 font-bold transition flex items-center gap-2">
+                    <i class="fas fa-sync-alt"></i> تحديث
+                </button>
+                <div class="bg-white/20 px-4 py-1.5 rounded-full font-bold text-sm">
+                    الإجمالي: <span id="total-count">0</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto bg-gray-50 p-6 relative">
+            
+            <!-- شريط بحث إضافي لتسهيل الوصول -->
+            <div class="max-w-5xl mx-auto mb-6 relative">
+                <i class="fas fa-search absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="search-input" onkeyup="renderUsers()" placeholder="ابحث باسم الموظف أو رقم الهاتف..." class="w-full bg-white border border-gray-200 text-gray-900 rounded-xl shadow-sm focus:ring-[#0D1B6D] focus:border-[#0D1B6D] block pr-12 p-3.5 outline-none transition-colors">
+            </div>
+
+            <!-- حاوية قائمة الموظفين -->
+            <div id="usersContainer" class="max-w-5xl mx-auto space-y-4 pb-24"></div>
+
+        </main>
+
+        <!-- زر الإضافة العائم -->
+        <button onclick="openUserModal()" class="fab-button w-14 h-14 bg-[#4CAF50] hover:bg-green-600 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105">
+            <i class="fas fa-user-plus text-xl"></i>
+        </button>
+    </div>
+
+    <!-- ======================= النوافذ المنبثقة (Modals) ======================= -->
+
+    <!-- نافذة إضافة / تعديل موظف -->
+    <div id="user-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto flex flex-col">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
+                <h3 id="modal-title" class="text-xl font-bold text-[#0D1B6D]">إضافة موظف جديد</h3>
+                <button onclick="closeModal('user-modal')" class="text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="user-id">
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">الاسم الكامل <span class="text-red-500">*</span></label>
+                    <input type="text" id="user-name" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#0D1B6D]">
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">رقم الهاتف <span class="text-red-500">*</span></label>
+                        <input type="tel" id="user-phone" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#0D1B6D] text-left" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">كلمة المرور <span class="text-red-500">*</span></label>
+                        <input type="text" id="user-pass" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#0D1B6D] text-left" dir="ltr">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">البريد الإلكتروني (Email)</label>
+                    <input type="email" id="user-email" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#0D1B6D] text-left" dir="ltr">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">FCM Token (للإشعارات)</label>
+                    <input type="text" id="user-fcm" class="w-full border border-gray-300 p-2.5 rounded-lg focus:outline-none focus:border-[#0D1B6D]">
+                </div>
+
+                <div class="border-t border-gray-100 pt-4 mt-2">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">الصلاحية:</label>
+                    <div class="flex gap-6">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="user-perm" value="admin" class="w-4 h-4 text-[#0D1B6D]">
+                            <span class="font-bold text-[#0D1B6D]">مدير (Admin)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="user-perm" value="employee" checked class="w-4 h-4 text-[#0D1B6D]">
+                            <span class="font-bold text-gray-600">موظف (Employee)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-100 pt-4 mt-2">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">حالة الحساب:</label>
+                    <div class="flex gap-6">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="user-status" value="active" checked class="w-4 h-4 text-green-600">
+                            <span class="font-bold text-green-600">نشط</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="user-status" value="not_active" class="w-4 h-4 text-red-600">
+                            <span class="font-bold text-red-600">موقوف</span>
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+            <div class="p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 rounded-b-2xl sticky bottom-0">
+                <button onclick="closeModal('user-modal')" class="px-6 py-2.5 text-gray-600 font-bold hover:bg-gray-200 rounded-lg transition-colors">إلغاء</button>
+                <button onclick="saveUser()" class="px-8 py-2.5 bg-[#0D1B6D] text-white font-bold rounded-lg shadow-md hover:bg-blue-900 transition-colors">حفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة تأكيد الحذف -->
+    <div id="delete-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-triangle text-3xl text-red-600"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">تأكيد الحذف</h3>
+            <p class="text-gray-500 mb-6" id="delete-message">هل أنت متأكد من رغبتك في حذف هذا الموظف نهائياً؟</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeModal('delete-modal')" class="flex-1 px-4 py-2 text-gray-600 font-bold bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">إلغاء</button>
+                <button id="confirm-delete-btn" class="flex-1 px-4 py-2 bg-red-600 text-white font-bold hover:bg-red-700 rounded-lg transition-colors">حذف</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- إشعار التنبيه (Toast) -->
+    <div id="toast-message" class="fixed top-4 left-1/2 transform -translate-x-1/2 text-white px-6 py-3 rounded-xl shadow-lg hidden-element transition-opacity z-50 flex items-center gap-3">
+        <i id="toast-icon" class="fas fa-check-circle text-xl"></i> <span id="toast-text" class="font-bold"></span>
+    </div>
+
+    <script>
+        // --- 1. البيانات الوهمية للمحاكاة ---
+        let usersData = [
+            { user_id: "EMP-1", display_name: "مدير النظام", phone_number: "777000000", email: "admin@souq.com", password: "admin_password", user_permissions: "admin", status: "active", fcm_token: "fcm_token_admin" },
+            { user_id: "EMP-2", display_name: "أحمد الموظف", phone_number: "711123456", email: "ahmed@souq.com", password: "pass_ahmed", user_permissions: "employee", status: "active", fcm_token: "" },
+            { user_id: "EMP-3", display_name: "خالد سعيد", phone_number: "733987654", email: "khaled@souq.com", password: "pass_khaled", user_permissions: "employee", status: "not_active", fcm_token: "fcm_token_khaled" }
+        ];
+
+        let userToDeleteId = null;
+
+        // --- 2. رسم بيانات الموظفين ---
+        function renderUsers() {
+            let container = document.getElementById('usersContainer');
+            let query = document.getElementById('search-input').value.toLowerCase();
+            let totalCountEl = document.getElementById('total-count');
+
+            let htmlStr = '';
+            let count = 0;
+
+            for (let i = 0; i < usersData.length; i++) {
+                let u = usersData[i];
+                if (query && !u.display_name.toLowerCase().includes(query) && !u.phone_number.includes(query)) continue;
+                
+                count++;
+                
+                let isBtnAdmin = u.user_permissions === 'admin';
+                let permText = isBtnAdmin ? 'مدير' : 'موظف';
+                let permColor = isBtnAdmin ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-gray-100 text-gray-800 border-gray-200';
+                
+                let isActive = u.status === 'active';
+                let statusText = isActive ? 'الحالة: نشط' : 'الحالة: موقوف';
+                let statusColor = isActive ? 'text-[#4CAF50]' : 'text-red-600';
+
+                htmlStr += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-md transition-shadow">';
+                
+                htmlStr += '<div class="flex-1">';
+                htmlStr += '<div class="flex items-center gap-3 mb-2">';
+                htmlStr += '<h3 class="text-xl font-bold text-gray-900">' + u.display_name + '</h3>';
+                htmlStr += '<span class="px-3 py-1 rounded-full text-xs font-bold border ' + permColor + '">' + permText + '</span>';
+                htmlStr += '</div>';
+
+                htmlStr += '<div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600 mt-3">';
+                htmlStr += '<div><i class="fas fa-phone w-4 text-gray-400"></i> رقم الهاتف: <span dir="ltr" class="font-bold">' + u.phone_number + '</span></div>';
+                htmlStr += '<div><i class="fas fa-lock w-4 text-gray-400"></i> كلمة المرور: <span class="font-bold">' + u.password + '</span></div>';
+                htmlStr += '<div><i class="fas fa-envelope w-4 text-gray-400"></i> الإيميل: <span dir="ltr">' + (u.email || 'لا يوجد') + '</span></div>';
+                htmlStr += '<div class="font-bold ' + statusColor + '"><i class="fas ' + (isActive ? 'fa-check-circle' : 'fa-ban') + ' w-4"></i> ' + statusText + '</div>';
+                htmlStr += '</div>';
+                htmlStr += '</div>';
+
+                // الأزرار
+                htmlStr += '<div class="flex gap-2 justify-end md:justify-center">';
+                htmlStr += '<button onclick="openUserModal(\'' + u.user_id + '\')" class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors shadow-sm"><i class="fas fa-pen"></i></button>';
+                htmlStr += '<button onclick="attemptDelete(\'' + u.user_id + '\', \'' + u.display_name + '\', \'' + u.user_permissions + '\')" class="w-10 h-10 rounded-full bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors shadow-sm"><i class="fas fa-trash"></i></button>';
+                htmlStr += '</div>';
+
+                htmlStr += '</div>';
+            }
+
+            if(count === 0) {
+                htmlStr = '<div class="text-center py-20 text-gray-400"><i class="fas fa-users-slash text-6xl mb-4"></i><h3 class="text-xl font-bold">لا يوجد موظفين مطابقين للبحث</h3></div>';
+            }
+
+            container.innerHTML = htmlStr;
+            totalCountEl.innerText = count;
+        }
+
+        // --- 3. التحكم بالنوافذ المنبثقة (Modals) ---
+        function openModal(id) { document.getElementById(id).classList.remove('hidden-element'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden-element'); }
+
+        function openUserModal(id) {
+            let titleEl = document.getElementById('modal-title');
+            let idInput = document.getElementById('user-id');
+            let nameInput = document.getElementById('user-name');
+            let phoneInput = document.getElementById('user-phone');
+            let passInput = document.getElementById('user-pass');
+            let emailInput = document.getElementById('user-email');
+            let fcmInput = document.getElementById('user-fcm');
+
+            if (id) {
+                // وضع التعديل
+                titleEl.innerText = "تعديل بيانات الموظف";
+                for (let i = 0; i < usersData.length; i++) {
+                    if (usersData[i].user_id === id) {
+                        let u = usersData[i];
+                        idInput.value = u.user_id;
+                        nameInput.value = u.display_name;
+                        phoneInput.value = u.phone_number;
+                        passInput.value = u.password;
+                        emailInput.value = u.email || "";
+                        fcmInput.value = u.fcm_token || "";
+                        
+                        document.querySelector('input[name="user-perm"][value="' + u.user_permissions + '"]').checked = true;
+                        document.querySelector('input[name="user-status"][value="' + u.status + '"]').checked = true;
+                        break;
+                    }
+                }
+            } else {
+                // وضع الإضافة
+                titleEl.innerText = "إضافة موظف جديد";
+                idInput.value = "";
+                nameInput.value = "";
+                phoneInput.value = "";
+                passInput.value = "";
+                emailInput.value = "";
+                fcmInput.value = "";
+                document.querySelector('input[name="user-perm"][value="employee"]').checked = true;
+                document.querySelector('input[name="user-status"][value="active"]').checked = true;
+            }
+            openModal('user-modal');
+        }
+
+        // --- 4. العمليات (حفظ وتأكيد حذف) ---
+        function saveUser() {
+            let id = document.getElementById('user-id').value;
+            let name = document.getElementById('user-name').value.trim();
+            let phone = document.getElementById('user-phone').value.trim();
+            let pass = document.getElementById('user-pass').value.trim();
+
+            if(!name || !phone || !pass) {
+                showToast("يرجى تعبئة الحقول الإجبارية (الاسم، الهاتف، كلمة المرور)", false);
+                return;
+            }
+
+            let newUser = {
+                user_id: id || "EMP-" + Date.now(),
+                display_name: name,
+                phone_number: phone,
+                password: pass,
+                email: document.getElementById('user-email').value.trim(),
+                fcm_token: document.getElementById('user-fcm').value.trim(),
+                user_permissions: document.querySelector('input[name="user-perm"]:checked').value,
+                status: document.querySelector('input[name="user-status"]:checked').value
+            };
+
+            if (id) {
+                // تعديل
+                for (let i = 0; i < usersData.length; i++) {
+                    if (usersData[i].user_id === id) {
+                        usersData[i] = newUser;
+                        break;
+                    }
+                }
+            } else {
+                // إضافة
+                usersData.unshift(newUser);
+            }
+
+            closeModal('user-modal');
+            renderUsers();
+            showToast(id ? "تم التعديل بنجاح" : "تمت الإضافة بنجاح", true);
+        }
+
+        function attemptDelete(id, name, permissions) {
+            // التحقق إذا كان الموظف المراد حذفه هو المدير الوحيد (نفس منطق Kotlin)
+            if (permissions === 'admin') {
+                let adminCount = 0;
+                for (let i = 0; i < usersData.length; i++) {
+                    if (usersData[i].user_permissions === 'admin') adminCount++;
+                }
+
+                if (adminCount <= 1) {
+                    showToast("لا يمكن حذف حساب المدير الوحيد. أضف مديراً آخر أولاً.", false);
+                    return;
+                }
+            }
+
+            // إذا تخطى الفحص، يتم فتح نافذة الحذف
+            userToDeleteId = id;
+            document.getElementById('delete-message').innerText = "هل أنت متأكد من رغبتك في حذف الموظف '" + name + "' نهائياً؟";
+            document.getElementById('confirm-delete-btn').onclick = executeDelete;
+            openModal('delete-modal');
+        }
+
+        function executeDelete() {
+            for (let i = 0; i < usersData.length; i++) {
+                if (usersData[i].user_id === userToDeleteId) {
+                    usersData.splice(i, 1);
+                    break;
+                }
+            }
+            closeModal('delete-modal');
+            renderUsers();
+            showToast("تم حذف الموظف بنجاح", true);
+        }
+
+        // إشعار التنبيه (Toast) يتعامل مع النجاح والخطأ
+        function showToast(message, isSuccess) {
+            let toast = document.getElementById('toast-message');
+            let icon = document.getElementById('toast-icon');
+            
+            document.getElementById('toast-text').innerText = message;
+            
+            if (isSuccess) {
+                toast.className = "fixed top-4 left-1/2 transform -translate-x-1/2 bg-[#4CAF50] text-white px-6 py-3 rounded-xl shadow-lg transition-opacity z-50 flex items-center gap-3";
+                icon.className = "fas fa-check-circle text-xl";
+            } else {
+                toast.className = "fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-xl shadow-lg transition-opacity z-50 flex items-center gap-3";
+                icon.className = "fas fa-exclamation-triangle text-xl";
+            }
+
+            toast.classList.remove('hidden-element');
+            setTimeout(function() {
+                toast.classList.add('hidden-element');
+            }, 4000);
+        }
+
+        // التهيئة الأولى عند تحميل الصفحة
+        window.onload = renderUsers;
+    </script>
+</body>
+</html>
