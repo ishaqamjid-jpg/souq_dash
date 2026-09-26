@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>النسخة الاحتياطية | Souq app</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+        .hidden-element { display: none !important; }
+    </style>
+</head>
+<body class="bg-[#121212] flex h-screen overflow-hidden text-white">
+
+    <aside class="w-64 bg-gray-900 flex flex-col shrink-0 shadow-xl z-20">
+        <div class="h-16 flex items-center justify-center font-black text-2xl bg-gray-950 border-b border-gray-800">
+            Souq app
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto text-white">
+            <a href="dashboard.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg">الرئيسية</a>
+            <a href="setting.html" class="block px-4 py-3 bg-[#1E1E1E] border border-gray-700 rounded-lg font-bold text-[#4CAF50]"><i class="fas fa-arrow-right ml-2 text-sm"></i> رجوع للإعدادات</a>
+        </nav>
+    </aside>
+
+    <div class="flex-1 flex flex-col overflow-hidden relative">
+        <header class="h-16 bg-[#1E1E1E] shadow-md flex items-center justify-between px-8 shrink-0 z-10 border-b border-gray-800">
+            <h2 class="text-xl font-bold">النسخة الاحتياطية (Backup)</h2>
+        </header>
+
+        <main class="flex-1 overflow-y-auto flex items-center justify-center p-6">
+            <div class="max-w-md w-full bg-[#1E1E1E] border border-gray-800 rounded-2xl shadow-2xl p-8 text-center">
+                
+                <div class="w-24 h-24 bg-[#E91E63]/10 rounded-full flex items-center justify-center mx-auto mb-6 text-[#E91E63]">
+                    <i class="fas fa-cloud-download-alt text-5xl"></i>
+                </div>
+
+                <h3 class="text-2xl font-bold text-white mb-2">إدارة قاعدة البيانات</h3>
+                <p class="text-gray-400 mb-8 text-sm">سيتم حفظ الملفات في مجلد التنزيلات (Downloads/Souqfiles)</p>
+
+                <!-- أزرار الاستخراج -->
+                <div class="space-y-4">
+                    <button onclick="simulateAction('excel')" class="w-full bg-[#4CAF50] hover:bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg transition-transform hover:scale-[1.02] flex items-center justify-center gap-3">
+                        <i class="fas fa-file-excel text-xl"></i> استخراج بصيغة Excel (للقراءة)
+                    </button>
+
+                    <button onclick="simulateAction('json')" class="w-full bg-[#2196F3] hover:bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg transition-transform hover:scale-[1.02] flex items-center justify-center gap-3">
+                        <i class="fas fa-file-code text-xl"></i> نسخ احتياطي بصيغة JSON (كامل)
+                    </button>
+                </div>
+
+                <div class="my-8 border-t border-gray-700 relative">
+                    <span class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#1E1E1E] px-4 text-gray-500 text-sm">منطقة الاستعادة</span>
+                </div>
+
+                <!-- زر الاستعادة -->
+                <div class="relative">
+                    <input type="file" id="restore-file" class="hidden" accept=".json" onchange="simulateAction('restore')">
+                    <button onclick="document.getElementById('restore-file').click()" class="w-full bg-[#FFA000] hover:bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg transition-transform hover:scale-[1.02] flex items-center justify-center gap-3">
+                        <i class="fas fa-cloud-upload-alt text-xl"></i> استعادة قاعدة البيانات (JSON)
+                    </button>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <div id="toast-message" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg hidden-element transition-opacity z-50 flex items-center gap-3">
+        <i class="fas fa-info-circle text-xl"></i> <span id="toast-text" class="font-bold"></span>
+    </div>
+
+    <script>
+        function simulateAction(type) {
+            let msg = "";
+            if(type === 'excel') msg = "تم حفظ نسخة Excel قابلة للتعديل في التنزيلات/Souqfiles";
+            else if(type === 'json') msg = "تم الحفظ بنجاح بصيغة JSON في التنزيلات/Souqfiles";
+            else if(type === 'restore') msg = "تم استعادة قاعدة البيانات بنجاح!";
+
+            let toast = document.getElementById('toast-message');
+            document.getElementById('toast-text').innerText = msg;
+            toast.classList.remove('hidden-element');
+            
+            // تصفير ملف الإدخال للاستعادة
+            document.getElementById('restore-file').value = "";
+
+            setTimeout(function() { toast.classList.add('hidden-element'); }, 4000);
+        }
+    </script>
+</body>
+</html>
