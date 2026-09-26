@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التقارير والإحصائيات | Souq app</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- خط تجوال -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+        /* كلاس لإخفاء العناصر بسلاسة */
+        .hidden-tab { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50 flex h-screen overflow-hidden">
+
+    <!-- القائمة الجانبية (Sidebar) -->
+    <aside class="w-64 bg-gray-900 text-white flex flex-col shrink-0 shadow-lg z-20">
+        <div class="h-16 flex items-center justify-center font-black text-2xl bg-gray-950 border-b border-gray-800">
+            Souq app
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <a href="dashboard.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">الرئيسية</a>
+            <a href="orders.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الطلبات</a>
+            <!-- أضفنا رابط التقارير هنا وجعلناه النشط -->
+            <a href="reports.html" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">التقارير والإحصائيات</a>
+            <a href="#" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">المنتجات</a>
+            <a href="#" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">العملاء</a>
+        </nav>
+        <div class="p-4 border-t border-gray-800">
+            <button class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">
+                تسجيل الخروج
+            </button>
+        </div>
+    </aside>
+
+    <!-- منطقة المحتوى الرئيسية -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+        
+        <!-- الشريط العلوي (Header) -->
+        <header class="h-16 bg-white shadow-sm flex items-center justify-between px-8 shrink-0 z-10 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800">التقارير والإحصائيات</h2>
+            <div class="flex items-center gap-6">
+                <div class="text-sm font-semibold text-gray-600 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">M</div>
+                    مدير النظام
+                </div>
+            </div>
+        </header>
+
+        <!-- مساحة العمل -->
+        <main class="flex-1 overflow-y-auto bg-gray-50 flex flex-col relative">
+            
+            <!-- أزرار التبويبات -->
+            <div class="flex bg-white px-4 border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+                <button id="btn-tab-stats" onclick="switchTab('stats')" class="px-6 py-4 font-bold border-b-4 border-[#0D1B6D] text-[#0D1B6D] transition-colors">الإحصائيات</button>
+                <button id="btn-tab-orders" onclick="switchTab('orders')" class="px-6 py-4 font-bold border-b-4 border-transparent text-gray-500 hover:text-gray-800 transition-colors">التقارير وسجل الطلبات</button>
+                <button id="btn-tab-acc" onclick="switchTab('acc')" class="px-6 py-4 font-bold border-b-4 border-transparent text-gray-500 hover:text-gray-800 transition-colors">تقارير الحسابات</button>
+            </div>
+
+            <!-- الحاوية الرئيسية -->
+            <div class="p-6 max-w-7xl w-full mx-auto">
+
+                <!-- ============================== التبويب الأول: الإحصائيات ============================== -->
+                <div id="tab-stats">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <input type="checkbox" id="stats-date-toggle" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer" onchange="toggleDateFilter('stats-dates', this.checked)">
+                            <label for="stats-date-toggle" class="font-bold text-gray-700 cursor-pointer">تفعيل فلتر التاريخ</label>
+                        </div>
+                        
+                        <div id="stats-dates" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 opacity-50 pointer-events-none transition-opacity">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">من تاريخ</label>
+                                <input type="date" id="stats-from" class="w-full border border-gray-300 p-2.5 rounded focus:outline-none focus:border-[#0D1B6D]">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">إلى تاريخ</label>
+                                <input type="date" id="stats-to" class="w-full border border-gray-300 p-2.5 rounded focus:outline-none focus:border-[#0D1B6D]">
+                            </div>
+                        </div>
+
+                        <button onclick="analyzeStats()" class="w-full bg-[#0D1B6D] hover:bg-blue-900 text-white font-bold py-3 rounded shadow transition-colors">تحليل وعرض الإحصائيات</button>
+                    </div>
+
+                    <!-- نتائج الإحصائيات -->
+                    <div id="stats-results" class="hidden-tab">
+                        <h3 class="font-bold text-gray-700 mb-4 text-lg">النتائج الإحصائية:</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div class="bg-[#4CAF50] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24">
+                                <span class="text-xs font-bold opacity-90">المكتملة</span>
+                                <span id="stat-completed" class="text-2xl font-black">0</span>
+                            </div>
+                            <div class="bg-[#E53935] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24">
+                                <span class="text-xs font-bold opacity-90">المرفوضة</span>
+                                <span id="stat-canceled" class="text-2xl font-black">0</span>
+                            </div>
+                            <div class="bg-[#00ACC1] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24">
+                                <span class="text-xs font-bold opacity-90">المواصلات</span>
+                                <span id="stat-transport" class="text-2xl font-black">0.0</span>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div class="bg-[#F57C00] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24">
+                                <span class="text-xs font-bold opacity-90">التكاليف</span>
+                                <span id="stat-costs" class="text-2xl font-black">0.0</span>
+                            </div>
+                            <div class="bg-[#8E24AA] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24">
+                                <span class="text-xs font-bold opacity-90">الإيرادات</span>
+                                <span id="stat-revenue" class="text-2xl font-black">0.0</span>
+                            </div>
+                            <div class="bg-[#2E7D32] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24">
+                                <span class="text-xs font-bold opacity-90">الربح الصافي</span>
+                                <span id="stat-profit" class="text-2xl font-black">0.0</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-[#43A047] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24">
+                                <span class="text-xs font-bold opacity-90">إجمالي القبض (سندات)</span>
+                                <span id="stat-income" class="text-2xl font-black">0.0</span>
+                            </div>
+                            <div class="bg-[#D32F2F] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24">
+                                <span class="text-xs font-bold opacity-90">إجمالي الصرف (سندات)</span>
+                                <span id="stat-expense" class="text-2xl font-black">0.0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================== التبويب الثاني: التقارير وسجل الطلبات ============================== -->
+                <div id="tab-orders" class="hidden-tab">
+                    
+                    <!-- فلاتر البحث للطلبات -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <input type="text" id="filter-order-num" placeholder="رقم الطلب" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                            <input type="text" id="filter-phone" placeholder="رقم العميل" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <input type="text" id="filter-trader" placeholder="اسم التاجر" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                            <input type="text" id="filter-part" placeholder="اسم القطعة" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <input type="text" id="filter-quotation" placeholder="رقم فاتورة عرض السعر" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                            <input type="text" id="filter-invoice" placeholder="رقم فاتورة البيع" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <select id="filter-status" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500 bg-white">
+                                <option value="">حالة الطلب (الكل)</option>
+                                <option value="completed">مكتمل (completed)</option>
+                                <option value="canceled">مرفوض (canceled)</option>
+                                <option value="going">جاري التوصيل (going)</option>
+                                <option value="pending">معلق (pending)</option>
+                            </select>
+                            <input type="text" id="filter-receiver" placeholder="مستلم الطلب (من الإدارة)" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                        </div>
+
+                        <div class="flex items-center gap-3 mb-4 mt-6 border-t pt-4">
+                            <input type="checkbox" id="orders-date-toggle" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer" onchange="toggleDateFilter('orders-dates', this.checked)">
+                            <label for="orders-date-toggle" class="font-bold text-gray-700 cursor-pointer">تفعيل فلتر التاريخ</label>
+                        </div>
+                        <div id="orders-dates" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 opacity-50 pointer-events-none transition-opacity">
+                            <input type="date" id="orders-from" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-[#0D1B6D]">
+                            <input type="date" id="orders-to" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-[#0D1B6D]">
+                        </div>
+
+                        <button onclick="searchOrders()" class="w-full bg-[#0D1B6D] hover:bg-blue-900 text-white font-bold py-3 rounded shadow transition-colors">بحث في السجل</button>
+                    </div>
+
+                    <!-- أزرار الإجراءات (طباعة) -->
+                    <div id="orders-actions" class="flex gap-4 mb-6 hidden-tab">
+                        <button class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded shadow transition-colors flex items-center justify-center gap-2">
+                            <i class="fas fa-file-pdf"></i> تصدير PDF
+                        </button>
+                        <button class="flex-1 bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded shadow transition-colors flex items-center justify-center gap-2">
+                            <i class="fas fa-share-alt"></i> مشاركة فاتورة العميل
+                        </button>
+                    </div>
+
+                    <!-- حاوية نتائج الطلبات -->
+                    <div id="orders-results-container" class="space-y-4"></div>
+                </div>
+
+
+                <!-- ============================== التبويب الثالث: تقارير الحسابات ============================== -->
+                <div id="tab-acc" class="hidden-tab">
+                    
+                    <!-- فلاتر بحث الحسابات -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <input type="text" id="acc-doc-num" placeholder="رقم السند" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                            <select id="acc-type" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500 bg-white">
+                                <option value="">نوع السند (الكل)</option>
+                                <option value="قبض">قبض</option>
+                                <option value="صرف">صرف</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <input type="text" id="acc-details" placeholder="التفاصيل (بحث نصي)" class="w-full border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                        </div>
+
+                        <div class="flex items-center gap-3 mb-4 mt-6 border-t pt-4">
+                            <input type="checkbox" id="acc-date-toggle" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer" onchange="toggleDateFilter('acc-dates', this.checked)">
+                            <label for="acc-date-toggle" class="font-bold text-gray-700 cursor-pointer">تفعيل فلتر التاريخ</label>
+                        </div>
+                        <div id="acc-dates" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 opacity-50 pointer-events-none transition-opacity">
+                            <input type="date" id="acc-from" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-[#0D1B6D]">
+                            <input type="date" id="acc-to" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-[#0D1B6D]">
+                        </div>
+
+                        <button onclick="searchAccounting()" class="w-full bg-[#0D1B6D] hover:bg-blue-900 text-white font-bold py-3 rounded shadow transition-colors">بحث الحسابات</button>
+                    </div>
+
+                    <!-- أزرار الإجراءات (طباعة) -->
+                    <div id="acc-actions" class="mb-6 hidden-tab">
+                        <button class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded shadow transition-colors flex items-center justify-center gap-2">
+                            <i class="fas fa-file-pdf"></i> مشاركة تقرير الحسابات (PDF)
+                        </button>
+                    </div>
+
+                    <!-- حاوية نتائج الحسابات -->
+                    <div id="acc-results-container" class="space-y-4"></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- كود الجافاسكريبت (Vanilla JS) المبسط والآمن -->
+    <script>
+        // --- 1. تبديل الواجهات (Tabs) ---
+        function switchTab(tabId) {
+            // إخفاء جميع التبويبات
+            document.getElementById('tab-stats').classList.add('hidden-tab');
+            document.getElementById('tab-orders').classList.add('hidden-tab');
+            document.getElementById('tab-acc').classList.add('hidden-tab');
+            
+            // إظهار التبويب المطلوب
+            document.getElementById('tab-' + tabId).classList.remove('hidden-tab');
+
+            // إعادة ضبط ألوان الأزرار
+            let btnStats = document.getElementById('btn-tab-stats');
+            let btnOrders = document.getElementById('btn-tab-orders');
+            let btnAcc = document.getElementById('btn-tab-acc');
+
+            let inactiveClasses = "border-transparent text-gray-500 hover:text-gray-800";
+            let activeClasses = "border-[#0D1B6D] text-[#0D1B6D]";
+
+            // تصفير الجميع
+            btnStats.className = "px-6 py-4 font-bold border-b-4 transition-colors " + inactiveClasses;
+            btnOrders.className = "px-6 py-4 font-bold border-b-4 transition-colors " + inactiveClasses;
+            btnAcc.className = "px-6 py-4 font-bold border-b-4 transition-colors " + inactiveClasses;
+
+            // تفعيل الزر المضغوط
+            if(tabId === 'stats') btnStats.className = "px-6 py-4 font-bold border-b-4 transition-colors " + activeClasses;
+            if(tabId === 'orders') btnOrders.className = "px-6 py-4 font-bold border-b-4 transition-colors " + activeClasses;
+            if(tabId === 'acc') btnAcc.className = "px-6 py-4 font-bold border-b-4 transition-colors " + activeClasses;
+        }
+
+        // --- 2. تفعيل / تعطيل حقول التاريخ ---
+        function toggleDateFilter(containerId, isChecked) {
+            let container = document.getElementById(containerId);
+            if (isChecked) {
+                container.classList.remove('opacity-50', 'pointer-events-none');
+            } else {
+                container.classList.add('opacity-50', 'pointer-events-none');
+            }
+        }
+
+        // --- 3. بيانات وهمية للمحاكاة (Mock Data) ---
+        // بيانات الطلبات مع القطع
+        let mockOrdersData = [
+            { order_id: "1", order_number: 1001, order_status: "completed", user_number: "777111222", delivery_fees: 1500, created_at: "2023-10-01", order_receiving_by: "أحمد", items: [ { purchase_price: 10000, selling_price: 12000, quantity: 1, trader_name: "تاجر أ", part_name: "فحمات", quotation_number: "Q1", invoice_number: "INV1" } ] },
+            { order_id: "2", order_number: 1002, order_status: "canceled", user_number: "711222333", delivery_fees: 0, created_at: "2023-10-02", order_receiving_by: "خالد", items: [ { purchase_price: 0, selling_price: 0, quantity: 2, trader_name: "تاجر ب", part_name: "فلتر", quotation_number: "Q2", invoice_number: "" } ] },
+            { order_id: "3", order_number: 1003, order_status: "completed", user_number: "777333444", delivery_fees: 2000, created_at: "2023-10-03", order_receiving_by: "أحمد", items: [ { purchase_price: 5000, selling_price: 7000, quantity: 2, trader_name: "تاجر ج", part_name: "زيت", quotation_number: "Q3", invoice_number: "INV3" } ] }
+        ];
+
+        // بيانات السندات الحسابية
+        let mockAccountingData = [
+            { doc_number: "101", type: "قبض", amount: 20000, details: "دفعة مقدمة من عميل", date: "2023-10-01" },
+            { doc_number: "102", type: "صرف", amount: 5000, details: "مشتريات من تاجر أ", date: "2023-10-02" },
+            { doc_number: "103", type: "قبض", amount: 15000, details: "تصفية فاتورة", date: "2023-10-03" }
+        ];
+
+        // --- 4. وظائف تحليل وعرض البيانات (نفس منطق الكوتلن) ---
+
+        // أ) تحليل الإحصائيات
+        function analyzeStats() {
+            // إضافة تأثير التحميل الوهمي
+            document.getElementById('stats-results').classList.remove('hidden-tab');
+            
+            let completed = 0, canceled = 0, transport = 0, costs = 0, revenue = 0, profit = 0;
+            let income = 0, expense = 0;
+
+            // حساب الطلبات
+            for(let i=0; i<mockOrdersData.length; i++) {
+                let order = mockOrdersData[i];
+                if(order.order_status === "completed") {
+                    completed++;
+                    transport += order.delivery_fees;
+                    revenue += order.delivery_fees;
+                    for(let j=0; j<order.items.length; j++) {
+                        revenue += (order.items[j].selling_price * order.items[j].quantity);
+                        costs += (order.items[j].purchase_price * order.items[j].quantity);
+                    }
+                } else if(order.order_status === "canceled") {
+                    canceled++;
+                }
+            }
+            profit = revenue - costs - transport;
+
+            // حساب السندات
+            for(let i=0; i<mockAccountingData.length; i++) {
+                if(mockAccountingData[i].type === "قبض") income += mockAccountingData[i].amount;
+                if(mockAccountingData[i].type === "صرف") expense += mockAccountingData[i].amount;
+            }
+
+            // طباعة القيم في الشاشة
+            document.getElementById('stat-completed').innerText = completed;
+            document.getElementById('stat-canceled').innerText = canceled;
+            document.getElementById('stat-transport').innerText = transport;
+            document.getElementById('stat-costs').innerText = costs;
+            document.getElementById('stat-revenue').innerText = revenue;
+            document.getElementById('stat-profit').innerText = profit;
+            document.getElementById('stat-income').innerText = income;
+            document.getElementById('stat-expense').innerText = expense;
+        }
+
+        // ب) بحث سجل الطلبات
+        function searchOrders() {
+            // جلب القيم من الفلاتر
+            let fNum = document.getElementById('filter-order-num').value.toLowerCase();
+            let fPhone = document.getElementById('filter-phone').value.toLowerCase();
+            let fStatus = document.getElementById('filter-status').value;
+            let fTrader = document.getElementById('filter-trader').value.toLowerCase();
+            let fPart = document.getElementById('filter-part').value.toLowerCase();
+            let fQuot = document.getElementById('filter-quotation').value.toLowerCase();
+            let fInv = document.getElementById('filter-invoice').value.toLowerCase();
+            let fReceiver = document.getElementById('filter-receiver').value.toLowerCase();
+
+            let results = [];
+
+            // فلترة بسيطة للمحاكاة
+            for(let i=0; i<mockOrdersData.length; i++) {
+                let order = mockOrdersData[i];
+                
+                let match = true;
+                if(fNum && !order.order_number.toString().includes(fNum)) match = false;
+                if(fPhone && !order.user_number.includes(fPhone)) match = false;
+                if(fStatus && order.order_status !== fStatus) match = false;
+                if(fReceiver && order.order_receiving_by && !order.order_receiving_by.includes(fReceiver)) match = false;
+
+                if(match) results.push(order);
+            }
+
+            // بناء الـ HTML باستخدام دمج النصوص الآمن (بدون Backticks معقدة)
+            let container = document.getElementById('orders-results-container');
+            let actions = document.getElementById('orders-actions');
+            
+            if(results.length > 0) {
+                actions.classList.remove('hidden-tab');
+                let htmlStr = '';
+                for(let k=0; k<results.length; k++) {
+                    let o = results[k];
+                    let statusAr = o.order_status === "completed" ? "مكتمل" : (o.order_status === "canceled" ? "مرفوض" : o.order_status);
+                    
+                    htmlStr += '<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between">';
+                    htmlStr += '<div>';
+                    htmlStr += '<div class="font-bold text-[#0D1B6D] mb-1">رقم الطلب: ' + o.order_number + '</div>';
+                    htmlStr += '<div class="text-sm text-gray-500">تاريخ الطلب: ' + o.created_at + ' | رقم العميل: ' + o.user_number + '</div>';
+                    htmlStr += '</div>';
+                    htmlStr += '<div class="font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded">' + statusAr + '</div>';
+                    htmlStr += '</div>';
+                }
+                container.innerHTML = htmlStr;
+            } else {
+                actions.classList.add('hidden-tab');
+                container.innerHTML = '<div class="text-center text-gray-500 py-10">لا توجد نتائج مطابقة لبحثك</div>';
+            }
+        }
+
+        // ج) بحث تقارير الحسابات
+        function searchAccounting() {
+            let fDoc = document.getElementById('acc-doc-num').value;
+            let fType = document.getElementById('acc-type').value;
+            let fDetails = document.getElementById('acc-details').value.toLowerCase();
+
+            let results = [];
+            for(let i=0; i<mockAccountingData.length; i++) {
+                let acc = mockAccountingData[i];
+                let match = true;
+                
+                if(fDoc && !acc.doc_number.includes(fDoc)) match = false;
+                if(fType && acc.type !== fType) match = false;
+                if(fDetails && !acc.details.includes(fDetails)) match = false;
+
+                if(match) results.push(acc);
+            }
+
+            let container = document.getElementById('acc-results-container');
+            let actions = document.getElementById('acc-actions');
+
+            if(results.length > 0) {
+                actions.classList.remove('hidden-tab');
+                let htmlStr = '';
+                for(let k=0; k<results.length; k++) {
+                    let a = results[k];
+                    let colorClass = a.type === "قبض" ? "text-green-700" : "text-red-600";
+                    
+                    htmlStr += '<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">';
+                    htmlStr += '<div class="flex justify-between items-center mb-2">';
+                    htmlStr += '<div class="font-bold ' + colorClass + '">سند ' + a.type + ' #' + a.doc_number + '</div>';
+                    htmlStr += '<div class="font-black text-lg">' + a.amount + ' ريال</div>';
+                    htmlStr += '</div>';
+                    htmlStr += '<div class="text-gray-700 text-sm mb-1">' + a.details + '</div>';
+                    htmlStr += '<div class="text-gray-400 text-xs">' + a.date + '</div>';
+                    htmlStr += '</div>';
+                }
+                container.innerHTML = htmlStr;
+            } else {
+                actions.classList.add('hidden-tab');
+                container.innerHTML = '<div class="text-center text-gray-500 py-10">لا توجد سندات مطابقة لبحثك</div>';
+            }
+        }
+    </script>
+</body>
+</html>
