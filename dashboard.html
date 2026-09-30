@@ -13,7 +13,6 @@
     
     <style>
         body { font-family: 'Tajawal', sans-serif; }
-        /* لتخصيص السكرول بار في القائمة الجانبية */
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
     </style>
@@ -26,7 +25,6 @@
             Souq app
         </div>
         <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
-            <!-- الزر النشط الآن هو الرئيسية -->
             <a href="dashboard.html" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">الرئيسية</a>
             <a href="orders.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الطلبات</a>
             <a href="reports.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">التقارير والإحصائيات</a>
@@ -40,7 +38,6 @@
             <a href="setting.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium text-[#2196F3]"><i class="fas fa-cog ml-2"></i> الإعدادات</a>
         </nav>
         <div class="p-4 border-t border-gray-800">
-            <!-- تم تعديل هذا الجزء ليكون رابطاً يوجه لصفحة index.html -->
             <a href="index.html" class="block text-center w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">
                 تسجيل الخروج
             </a>
@@ -49,8 +46,6 @@
 
     <!-- منطقة المحتوى الرئيسية -->
     <div class="flex-1 flex flex-col overflow-hidden relative">
-        
-        <!-- الشريط العلوي (Header) -->
         <header class="h-16 bg-white shadow-sm flex items-center justify-between px-8 shrink-0 z-10 border-b border-gray-200">
             <h2 class="text-xl font-bold text-gray-800">لوحة التحكم الرئيسية</h2>
             <div class="flex items-center gap-6">
@@ -63,112 +58,162 @@
             </div>
         </header>
 
-        <!-- مساحة العمل -->
         <main class="flex-1 overflow-y-auto p-6 relative">
             <div class="max-w-7xl mx-auto space-y-6">
-                
-                <!-- رسالة ترحيبية -->
                 <div class="bg-gradient-to-l from-[#0D1B6D] to-blue-800 rounded-2xl p-8 text-white shadow-lg flex items-center justify-between">
                     <div>
                         <h1 class="text-2xl font-black mb-2">مرحباً بك في إدارة تطبيق Souq app</h1>
                         <p class="text-blue-100">نظرة عامة على أداء النظام وإحصائياته السريعة. اختر من القائمة الجانبية للبدء بإدارة العمليات.</p>
                     </div>
-                    <div class="hidden md:block">
-                        <i class="fas fa-chart-line text-7xl opacity-20"></i>
-                    </div>
+                    <div class="hidden md:block"><i class="fas fa-chart-line text-7xl opacity-20"></i></div>
                 </div>
 
-                <!-- بطاقات الإحصائيات السريعة -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
-                        <div class="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-2xl">
-                            <i class="fas fa-shopping-cart"></i>
-                        </div>
-                        <div>
-                            <div class="text-sm text-gray-500 font-bold mb-1">الطلبات المعلقة</div>
-                            <div class="text-2xl font-black text-gray-800">12</div>
-                        </div>
+                        <div class="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-2xl"><i class="fas fa-shopping-cart"></i></div>
+                        <div><div class="text-sm text-gray-500 font-bold mb-1">الطلبات المعلقة</div><div class="text-2xl font-black text-gray-800">12</div></div>
                     </div>
-
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
-                        <div class="w-14 h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center text-2xl">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div>
-                            <div class="text-sm text-gray-500 font-bold mb-1">الطلبات المكتملة</div>
-                            <div class="text-2xl font-black text-gray-800">845</div>
-                        </div>
+                        <div class="w-14 h-14 rounded-full bg-green-50 text-green-600 flex items-center justify-center text-2xl"><i class="fas fa-check-circle"></i></div>
+                        <div><div class="text-sm text-gray-500 font-bold mb-1">الطلبات المكتملة</div><div class="text-2xl font-black text-gray-800">845</div></div>
                     </div>
-
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
-                        <div class="w-14 h-14 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-2xl">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div>
-                            <div class="text-sm text-gray-500 font-bold mb-1">إجمالي العملاء</div>
-                            <div class="text-2xl font-black text-gray-800">320</div>
-                        </div>
+                        <div class="w-14 h-14 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-2xl"><i class="fas fa-users"></i></div>
+                        <div><div class="text-sm text-gray-500 font-bold mb-1">إجمالي العملاء</div><div class="text-2xl font-black text-gray-800">320</div></div>
                     </div>
-
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
-                        <div class="w-14 h-14 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center text-2xl">
-                            <i class="fas fa-store"></i>
-                        </div>
-                        <div>
-                            <div class="text-sm text-gray-500 font-bold mb-1">التجار المسجلين</div>
-                            <div class="text-2xl font-black text-gray-800">45</div>
-                        </div>
+                        <div class="w-14 h-14 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center text-2xl"><i class="fas fa-store"></i></div>
+                        <div><div class="text-sm text-gray-500 font-bold mb-1">التجار المسجلين</div><div class="text-2xl font-black text-gray-800">45</div></div>
                     </div>
-
                 </div>
 
-                <!-- اختصارات سريعة -->
                 <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">الوصول السريع</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <a href="orders.html" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-[#0D1B6D] transition-colors group flex items-center justify-between">
                         <div class="flex items-center gap-4">
-                            <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                                <i class="fas fa-box-open text-xl"></i>
-                            </div>
+                            <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors"><i class="fas fa-box-open text-xl"></i></div>
                             <span class="font-bold text-gray-700 group-hover:text-[#0D1B6D] transition-colors">معالجة الطلبات الجديدة</span>
                         </div>
                         <i class="fas fa-chevron-left text-gray-300 group-hover:text-blue-600 transition-colors"></i>
                     </a>
-
                     <a href="accounting.html" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-green-600 transition-colors group flex items-center justify-between">
                         <div class="flex items-center gap-4">
-                            <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-green-50 group-hover:text-green-600 transition-colors">
-                                <i class="fas fa-receipt text-xl"></i>
-                            </div>
+                            <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-green-50 group-hover:text-green-600 transition-colors"><i class="fas fa-receipt text-xl"></i></div>
                             <span class="font-bold text-gray-700 group-hover:text-green-700 transition-colors">إضافة سند مالي</span>
                         </div>
                         <i class="fas fa-chevron-left text-gray-300 group-hover:text-green-600 transition-colors"></i>
                     </a>
-
                     <a href="ads.html" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-pink-600 transition-colors group flex items-center justify-between">
                         <div class="flex items-center gap-4">
-                            <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-pink-50 group-hover:text-pink-600 transition-colors">
-                                <i class="fas fa-bullhorn text-xl"></i>
-                            </div>
+                            <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-pink-50 group-hover:text-pink-600 transition-colors"><i class="fas fa-bullhorn text-xl"></i></div>
                             <span class="font-bold text-gray-700 group-hover:text-pink-700 transition-colors">إرسال إشعار للعملاء</span>
                         </div>
                         <i class="fas fa-chevron-left text-gray-300 group-hover:text-pink-600 transition-colors"></i>
                     </a>
                 </div>
-
             </div>
         </main>
-        
     </div>
 
+    <!-- أكواد عرض التاريخ -->
     <script>
-        // إعداد التاريخ الحالي في الشريط العلوي
         window.onload = function() {
             let options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             let today = new Date().toLocaleDateString('ar-EG', options);
             document.getElementById('current-date').innerText = "اليوم: " + today;
         };
+    </script>
+
+    <!-- ================== أكواد Firebase لإشعارات الويب ================== -->
+    <!-- استدعاء مكتبات فايربيس للواجهة الأمامية -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
+
+    <script>
+        // 1. إعدادات الفايربيس (استبدلها ببيانات مشروعك الحقيقية)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // 2. تهيئة الفايربيس
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const messaging = firebase.messaging();
+
+        // 3. طلب الإذن (Permission) وجلب التوكن FCM
+        function requestNotificationPermission() {
+            Notification.requestPermission().then((permission) => {
+                if (permission === 'granted') {
+                    console.log('تم منح إذن الإشعارات.');
+                    // أدخل الـ VAPID Key الخاص بك هنا من إعدادات Firebase Cloud Messaging (الويب)
+                    messaging.getToken({ vapidKey: 'YOUR_PUBLIC_VAPID_KEY_HERE' }).then((currentToken) => {
+                        if (currentToken) {
+                            console.log("FCM_TOKEN:", currentToken);
+                            // TODO: قم بحفظ التوكن في قاعدة بيانات فايرستور للمستخدم الحالي (المدير)
+                        } else {
+                            console.log('لا يوجد توكن متاح.');
+                        }
+                    }).catch((err) => {
+                        console.log('حدث خطأ أثناء جلب التوكن.', err);
+                    });
+                }
+            });
+        }
+
+        requestNotificationPermission();
+
+        // 4. استقبال الإشعارات والشاشة مفتوحة (Foreground)
+        messaging.onMessage((payload) => {
+            console.log('تم استلام إشعار جديد: ', payload);
+            const title = payload.data?.title || payload.notification?.title || "إشعار جديد";
+            const message = payload.data?.message || payload.notification?.body || "يوجد طلب جديد بحاجة لمراجعة";
+            
+            showFCMToast(title, message);
+        });
+
+        // 5. دالة لعرض إشعار (Toast) جميل داخل الموقع عند ورود طلب جديد
+        function showFCMToast(title, message) {
+            let container = document.getElementById('fcm-toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'fcm-toast-container';
+                container.className = 'fixed top-4 left-4 z-50 flex flex-col gap-3';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = 'bg-[#0D1B6D] text-white px-5 py-4 rounded-xl shadow-2xl transform transition-all duration-500 translate-y-[-100%] opacity-0 flex items-start gap-4 w-80 cursor-pointer border border-blue-800';
+            
+            // عند الضغط على الإشعار يتم تحويله لصفحة الطلبات
+            toast.onclick = () => window.location.href = 'orders.html';
+
+            toast.innerHTML = `
+                <div class="bg-blue-500/20 p-3 rounded-full shrink-0">
+                    <i class="fas fa-bell text-blue-300 text-xl animate-pulse"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-bold text-sm mb-1 text-blue-100">${title}</h4>
+                    <p class="text-xs text-gray-300 leading-relaxed">${message}</p>
+                </div>
+                <button class="shrink-0 text-gray-400 hover:text-white" onclick="event.stopPropagation(); this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => { toast.classList.remove('translate-y-[-100%]', 'opacity-0'); }, 100);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-100%]');
+                setTimeout(() => toast.remove(), 500);
+            }, 6000);
+        }
     </script>
 </body>
 </html>
