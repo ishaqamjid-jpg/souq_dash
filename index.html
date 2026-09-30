@@ -48,7 +48,7 @@
         import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // 2. إعدادات الربط (يجب استبدالها بإعدادات مشروعك من لوحة تحكم فايربيس)
+        // 2. إعدادات الربط 
         const firebaseConfig = {
   apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg",
   authDomain: "souqalghiyar.firebaseapp.com",
@@ -82,7 +82,7 @@
             errorMessage.classList.add('hidden');
 
             try {
-                // الخطوة 1: تسجيل الدخول عبر Firebase Auth (مثل كود الأندرويد)
+                // الخطوة 1: تسجيل الدخول عبر Firebase Auth
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
@@ -100,7 +100,7 @@
                         // تم العثور على الموظف النشط
                         const doc = querySnapshot.docs[0];
                         const userData = doc.data();
-                        userData.user_id = doc.id; // حفظ المعرف مثل كود الأندرويد
+                        userData.user_id = doc.id; 
 
                         // حفظ بيانات المستخدم في المتصفح لاستخدامها في الداش بورد
                         localStorage.setItem('adminData', JSON.stringify(userData));
