@@ -340,13 +340,14 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
+  apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg",
+  authDomain: "souqalghiyar.firebaseapp.com",
+  databaseURL: "https://souqalghiyar-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "souqalghiyar",
+  storageBucket: "souqalghiyar.firebasestorage.app",
+  messagingSenderId: "186585426069",
+  appId: "1:186585426069:web:9f34cedeee498d1bd3539c"
+};
 
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
@@ -357,7 +358,7 @@
             Notification.requestPermission().then((permission) => {
                 if (permission === 'granted') {
                     console.log('تم منح إذن الإشعارات.');
-                    messaging.getToken({ vapidKey: 'YOUR_PUBLIC_VAPID_KEY_HERE' }).then((currentToken) => {
+                    messaging.getToken({ vapidKey: 'BPncXmrgoDlb__z2uDh6POxoQ2WkmvdCMm5PFp58sJc_ZfRo3pHhm_cf2S_u4_D4gDj-JKH-WCHHslqmVrje72A' }).then((currentToken) => {
                         if (currentToken) {
                             console.log("FCM_TOKEN:", currentToken);
                         }
