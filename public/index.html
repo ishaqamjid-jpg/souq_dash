@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول | Souq app</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-600 mb-2">لوحة التحكم</h1>
+            <p class="text-gray-500">مرحباً بك في إدارة Souq app</p>
+        </div>
+
+        <!-- رسالة الخطأ (تظهر عند فشل الدخول) -->
+        <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+        </div>
+
+        <form id="loginForm">
+            <div class="mb-4">
+                <label for="email" class="block text-gray-700 text-sm font-bold mb-2">البريد الإلكتروني</label>
+                <input type="email" id="email" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+
+            <div class="mb-6">
+                <label for="password" class="block text-gray-700 text-sm font-bold mb-2">كلمة المرور</label>
+                <input type="password" id="password" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <button type="submit" id="loginBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full focus:outline-none focus:shadow-outline transition duration-200">
+                    تسجيل الدخول
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- أكواد Firebase -->
+    <script type="module">
+        // 1. استدعاء مكتبات Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        // 2. إعدادات الربط 
+        const firebaseConfig = {
+  apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg",
+  authDomain: "souqalghiyar.firebaseapp.com",
+  databaseURL: "https://souqalghiyar-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "souqalghiyar",
+  storageBucket: "souqalghiyar.firebasestorage.app",
+  messagingSenderId: "186585426069",
+  appId: "1:186585426069:web:9f34cedeee498d1bd3539c"
+};
+
+        // 3. تهيئة Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // 4. عناصر واجهة المستخدم
+        const loginForm = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // 5. حدث الضغط على زر الدخول
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // منع تحديث الصفحة
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // تغيير حالة الزر أثناء التحميل
+            loginBtn.textContent = "جاري التحقق...";
+            loginBtn.disabled = true;
+            errorMessage.classList.add('hidden');
+
+            try {
+                // الخطوة 1: تسجيل الدخول عبر Firebase Auth
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                if (user) {
+                    // الخطوة 2: البحث في جدول UserEmp عن الموظف وحالته
+                    const q = query(
+                        collection(db, "UserEmp"), 
+                        where("email", "==", email),
+                        where("status", "==", "active")
+                    );
+                    
+                    const querySnapshot = await getDocs(q);
+
+                    if (!querySnapshot.empty) {
+                        // تم العثور على الموظف النشط
+                        const doc = querySnapshot.docs[0];
+                        const userData = doc.data();
+                        userData.user_id = doc.id; 
+
+                        // حفظ بيانات المستخدم في المتصفح لاستخدامها في الداش بورد
+                        localStorage.setItem('adminData', JSON.stringify(userData));
+
+                        // الانتقال إلى لوحة التحكم
+                        window.location.href = "dashboard.html";
+                    } else {
+                        // الموظف غير موجود في الجدول أو حسابه غير نشط
+                        await signOut(auth);
+                        showError("تم تسجيل الدخول لكن لا يوجد حساب موظف نشط بهذا الإيميل.");
+                    }
+                }
+            } catch (error) {
+                console.error("فشل تسجيل الدخول:", error);
+                showError("فشل تسجيل الدخول. تأكد من البريد الإلكتروني وكلمة المرور.");
+            } finally {
+                // إعادة الزر لحالته الطبيعية
+                loginBtn.textContent = "تسجيل الدخول";
+                loginBtn.disabled = false;
+            }
+        });
+
+        // دالة عرض رسائل الخطأ
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorMessage.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
