@@ -107,19 +107,37 @@
         let ordersData = [];
         let clientsData = {};
         let adminUsername = "مدير النظام";
+        
+        // حفظ حالة الطلبات المفتوحة لتجنب إغلاقها عند التحديث
+        let openOrders = new Set();
 
         window.onload = function() {
             firebase.auth().onAuthStateChanged(function(user) {
                 if (user) {
-                    adminUsername = user.displayName || user.email.split('@')[0];
+                    adminUsername = user.displayName || (user.email ? user.email.split('@')[0] : "مدير النظام");
                     document.getElementById('adminNameDisplay').innerText = `أهلاً، ${adminUsername}`;
-                    fetchTradersList();
-                    fetchOrders();
                 } else {
-                    window.location.href = "index.html";
+                    console.warn("جاري فحص النظام بدون تسجيل دخول. قد تواجه مشاكل في الصلاحيات.");
                 }
+                fetchTradersList();
+                fetchOrders();
             });
         };
+
+        // دالة هامة جداً لحماية الكود من الانهيار إذا كان الاسم يحتوي على رموز أو علامات تنصيص
+        function escapeHtml(unsafe) {
+            if (unsafe === null || unsafe === undefined) return '';
+            return (unsafe + '').replace(/[&<"'>]/g, function (m) {
+                switch (m) {
+                    case '&': return '&amp;';
+                    case '<': return '&lt;';
+                    case '>': return '&gt;';
+                    case '"': return '&quot;';
+                    case "'": return '&#039;';
+                    default: return m;
+                }
+            });
+        }
 
         function fetchTradersList() {
             db.collection('traders_management').onSnapshot(snap => {
@@ -151,14 +169,14 @@
                     clientsData[userId] = { name: name, whats: whats };
                     updateClientDOM(orderId, clientsData[userId]);
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) {}
         }
 
         function updateClientDOM(orderId, client) {
             let nameEl = document.getElementById(`client-name-${orderId}`);
             let whatsEl = document.getElementById(`client-whats-${orderId}`);
-            if(nameEl) nameEl.innerText = `اسم العميل: ${client.name}`;
-            if(whatsEl) whatsEl.innerText = `رقم الواتساب: ${client.whats}`;
+            if(nameEl) nameEl.innerText = `اسم العميل: ${escapeHtml(client.name)}`;
+            if(whatsEl) whatsEl.innerText = `رقم الواتساب: ${escapeHtml(client.whats)}`;
         }
 
         function formatDateTime(timestamp) {
@@ -183,36 +201,47 @@
 
         function fetchOrders() {
             renderTabs();
-            document.getElementById('ordersContainer').innerHTML = '<div class="flex justify-center py-20"><i class="fas fa-spinner fa-spin text-4xl text-[#0D1B6D]"></i></div>';
+            if(ordersData.length === 0) {
+                document.getElementById('ordersContainer').innerHTML = '<div class="flex justify-center py-20"><i class="fas fa-spinner fa-spin text-4xl text-[#0D1B6D]"></i></div>';
+            }
             
             db.collection('orders').onSnapshot(async (snapshot) => {
                 let tempOrders = [];
-                if (!snapshot.empty) {
-                    for (let doc of snapshot.docs) {
-                        let order = doc.data();
-                        order.order_id = doc.id;
-                        order.order_status = (order.order_status || 'pending').toLowerCase().trim();
-                        
-                        try {
-                            let itemsSnap = await db.collection('orders').doc(order.order_id).collection('items').get();
-                            if (!itemsSnap.empty) {
-                                order.items = itemsSnap.docs.map(iDoc => {
-                                    let itemData = iDoc.data();
-                                    itemData.item_id = iDoc.id; 
-                                    return itemData;
-                                });
-                            } else {
-                                // 🌟 التعديل هنا: جلب القطع من النظام القديم إذا لم تكن موجودة في الـ Subcollection
-                                order.items = order.items || [];
-                            }
-                        } catch(e) {
-                            order.items = order.items || [];
+                
+                let fetchPromises = snapshot.docs.map(async (doc) => {
+                    let order = doc.data();
+                    order.order_id = doc.id;
+                    order.order_status = (order.order_status || 'pending').toLowerCase().trim();
+                    
+                    try {
+                        let itemsSnap = await db.collection('orders').doc(order.order_id).collection('items').get();
+                        if (!itemsSnap.empty) {
+                            order.items = itemsSnap.docs.map(iDoc => {
+                                let itemData = iDoc.data();
+                                itemData.item_id = iDoc.id; 
+                                return itemData;
+                            });
+                        } else {
+                            // نظام الفولباك (Fallback) للطلبات القديمة المحفوظة في المصفوفة الأساسية
+                            let legacyItems = Array.isArray(order.items) ? order.items : [];
+                            order.items = legacyItems.map((it, idx) => {
+                                if (!it.item_id) it.item_id = "LEGACY-" + idx;
+                                return it;
+                            });
                         }
-                        
-                        tempOrders.push(order);
-                        fetchClientInfo(order.user_id, order.order_id);
+                    } catch(e) {
+                        let legacyItems = Array.isArray(order.items) ? order.items : [];
+                        order.items = legacyItems.map((it, idx) => {
+                            if (!it.item_id) it.item_id = "LEGACY-" + idx;
+                            return it;
+                        });
                     }
-                }
+                    
+                    tempOrders.push(order);
+                    fetchClientInfo(order.user_id, order.order_id);
+                });
+
+                await Promise.all(fetchPromises);
                 ordersData = tempOrders.sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
                 renderOrders();
             });
@@ -240,28 +269,42 @@
                 let statusDate = formatDateTime(order.order_status_date);
 
                 let itemsHtml = '';
-                (order.items || []).forEach(item => {
+                
+                // التأكد من أن items مصفوفة صالحة
+                let safeItems = Array.isArray(order.items) ? order.items : [];
+                
+                safeItems.forEach(item => {
+                    if(!item) return;
+                    
                     let inputClass = "border border-gray-300 p-2 rounded focus:outline-none focus:border-[#0D1B6D] w-full text-sm font-medium";
+                    
+                    // تأمين كافة المتغيرات قبل طباعتها بالـ HTML
+                    let safePartName = escapeHtml(item.part_name);
+                    let safeQuality = escapeHtml(item.quality_type);
+                    let safeTraderName = escapeHtml(item.trader_name);
+                    let safeQuotationNum = escapeHtml(item.quotation_number);
+                    let safeInvoiceNum = escapeHtml(item.invoice_number);
+                    let safeDesc = escapeHtml(item.description);
+                    let safeComments = escapeHtml(item.comments);
                     
                     itemsHtml += `<div class="bg-[#F9F9F9] border border-gray-200 rounded-lg p-4 mb-3 relative">`;
                     
                     if (isPending) {
-                        // 🌟 التعديل هنا: إضافة النوع والكمية في تاب المعلقة بجانب حقل تعديل الاسم
                         itemsHtml += `<div class="flex items-center gap-3 mb-2">
-                            <input type="text" class="${inputClass} font-bold flex-1" placeholder="اسم القطعة" value="${item.part_name || ''}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'part_name', this.value)">
-                            ${order.items.length > 1 ? `<button onclick="deleteItem('${order.order_id}', '${item.item_id}')" class="text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 border border-red-200 rounded"><i class="fas fa-trash"></i></button>` : ''}
+                            <input type="text" class="${inputClass} font-bold flex-1" placeholder="اسم القطعة" value="${safePartName}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'part_name', this.value)">
+                            ${safeItems.length > 1 ? `<button onclick="deleteItem('${order.order_id}', '${item.item_id}')" class="text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 border border-red-200 rounded"><i class="fas fa-trash"></i></button>` : ''}
                         </div>
                         <div class="text-sm font-bold text-gray-700 mb-3">
-                            النوع: ${item.quality_type || '-'} | 
+                            النوع: ${safeQuality || '-'} | 
                             الكمية: <span class="bg-gray-200 px-2 py-0.5 rounded text-[#0D1B6D] border border-gray-300">${item.quantity || 1}</span>
                         </div>`;
                     } else {
-                        itemsHtml += `<div class="font-bold text-[#0D1B6D] mb-1 text-lg">• ${item.part_name || ''}</div>
-                        <div class="text-sm font-bold text-gray-700 mb-3">النوع: ${item.quality_type || '-'} | الكمية: ${item.quantity || 1}</div>`;
+                        itemsHtml += `<div class="font-bold text-[#0D1B6D] mb-1 text-lg">• ${safePartName}</div>
+                        <div class="text-sm font-bold text-gray-700 mb-3">النوع: ${safeQuality || '-'} | الكمية: ${item.quantity || 1}</div>`;
                     }
 
-                    if(item.description) itemsHtml += `<div class="text-xs text-gray-500 mb-1 font-semibold">الوصف: ${item.description}</div>`;
-                    if(item.comments) itemsHtml += `<div class="text-xs text-gray-500 mb-3 font-semibold">ملاحظات: ${item.comments}</div>`;
+                    if(safeDesc) itemsHtml += `<div class="text-xs text-gray-500 mb-1 font-semibold">الوصف: ${safeDesc}</div>`;
+                    if(safeComments) itemsHtml += `<div class="text-xs text-gray-500 mb-3 font-semibold">ملاحظات: ${safeComments}</div>`;
 
                     if (isPending || isAdminApproval) {
                         itemsHtml += `<div class="grid grid-cols-2 gap-3 mb-3">
@@ -277,22 +320,22 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                             <div>
                                 <label class="text-xs font-bold text-gray-600 block mb-1">اسم التاجر</label>
-                                <input list="traders-list" class="${inputClass}" placeholder="اختر أو اكتب اسم التاجر" value="${item.trader_name || ''}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'trader_name', this.value)">
+                                <input list="traders-list" class="${inputClass}" placeholder="اختر أو اكتب اسم التاجر" value="${safeTraderName}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'trader_name', this.value)">
                             </div>
                             <div>
                                 <label class="text-xs font-bold text-gray-600 block mb-1">رقم فاتورة العرض</label>
-                                <input type="text" class="${inputClass}" value="${item.quotation_number || ''}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'quotation_number', this.value)">
+                                <input type="text" class="${inputClass}" value="${safeQuotationNum}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'quotation_number', this.value)">
                             </div>
                         </div>`;
                         
                         if(isAdminApproval) {
-                            itemsHtml += `<button onclick="saveQuotationPrice('${item.part_name}', '${item.quotation_number}', ${item.quotation_price || 0}, '${item.trader_name}')" class="w-full bg-[#0D1B6D] text-white text-xs font-bold py-2 rounded hover:bg-blue-900 transition">إضافة عرض السعر للفواتير</button>`;
+                            itemsHtml += `<button onclick="saveQuotationPrice('${safePartName.replace(/'/g, "\\'")}', '${safeQuotationNum.replace(/'/g, "\\'")}', ${item.quotation_price || 0}, '${safeTraderName.replace(/'/g, "\\'")}')" class="w-full bg-[#0D1B6D] text-white text-xs font-bold py-2 rounded hover:bg-blue-900 transition">إضافة عرض السعر للفواتير</button>`;
                         }
                     } else if (isGoing) {
                         itemsHtml += `<div class="grid grid-cols-2 gap-3 mb-3">
                             <div>
                                 <label class="text-xs font-bold text-gray-600 block mb-1">اسم التاجر</label>
-                                <input type="text" readonly class="${inputClass} bg-gray-100 cursor-not-allowed" value="${item.trader_name || ''}">
+                                <input type="text" readonly class="${inputClass} bg-gray-100 cursor-not-allowed" value="${safeTraderName}">
                             </div>
                             <div>
                                 <label class="text-xs font-bold text-gray-600 block mb-1">سعر الشراء</label>
@@ -301,43 +344,48 @@
                         </div>
                         <div>
                             <label class="text-xs font-bold text-gray-600 block mb-1">رقم الفاتورة النهائية</label>
-                            <input type="text" class="${inputClass}" value="${item.invoice_number || ''}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'invoice_number', this.value)">
+                            <input type="text" class="${inputClass}" value="${safeInvoiceNum}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'invoice_number', this.value)">
                         </div>`;
                     } else {
                         itemsHtml += `<div class="flex justify-between items-center bg-white p-3 rounded border border-gray-200 mt-2">
                             <span class="text-sm font-bold text-[#0D1B6D]">سعر البيع: ${item.selling_price || 0}</span>
                             <span class="text-sm font-bold text-gray-600">سعر الشراء: ${item.purchase_price || 0}</span>
                         </div>
-                        <div class="text-xs font-bold text-gray-500 mt-2">التاجر: ${item.trader_name || 'غير محدد'} | الفاتورة: ${item.invoice_number || item.quotation_number || 'غير محدد'}</div>`;
+                        <div class="text-xs font-bold text-gray-500 mt-2">التاجر: ${safeTraderName || 'غير محدد'} | الفاتورة: ${safeInvoiceNum || safeQuotationNum || 'غير محدد'}</div>`;
                     }
                     itemsHtml += `</div>`;
                 });
+
+                // المحافظة على حالة النافذة (مفتوحة أم مغلقة)
+                let isOpen = openOrders.has(order.order_id);
+                let detailsState = isOpen ? 'open' : '';
+                let iconState = isOpen ? 'fa-chevron-up' : 'fa-chevron-down';
 
                 let orderHtml = `<div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden mb-4">
                     <div class="p-4 cursor-pointer flex justify-between items-start hover:bg-gray-50 transition" onclick="toggleDetails('${order.order_id}')">
                         <div class="flex-1 space-y-1">
                             <div class="text-[#D32F2F] font-black text-lg">طلب رقم: #${order.order_number || ''}</div>
                             <div class="text-gray-500 text-xs font-semibold">تاريخ الطلب: ${orderDate}</div>
-                            <div class="mt-2 text-[#0D1B6D] font-bold text-[15px]">المركبة: ${order.vehicle_name || ''} - ${order.vehicle_model || ''}</div>
-                            <div class="text-gray-700 text-sm font-medium">الشركة: ${order.brand_name || ''} | مكان التصنيع: ${order.manufacture || ''}</div>
-                            <div class="text-gray-700 text-sm font-medium">رقم القاعدة (VIN): <span class="uppercase">${order.vin_number || 'غير متوفر'}</span></div>
-                            <div class="text-gray-500 text-xs font-medium">الموقع: ${order.delivery_location || ''}</div>
+                            <div class="mt-2 text-[#0D1B6D] font-bold text-[15px]">المركبة: ${escapeHtml(order.vehicle_name)} - ${escapeHtml(order.vehicle_model)}</div>
+                            <div class="text-gray-700 text-sm font-medium">الشركة: ${escapeHtml(order.brand_name)} | مكان التصنيع: ${escapeHtml(order.manufacture)}</div>
+                            <div class="text-gray-700 text-sm font-medium">رقم القاعدة (VIN): <span class="uppercase">${escapeHtml(order.vin_number) || 'غير متوفر'}</span></div>
+                            <div class="text-gray-500 text-xs font-medium">الموقع: ${escapeHtml(order.delivery_location)}</div>
                             
                             <div class="mt-2 text-[#0D1B6D] font-bold text-sm" id="client-name-${order.order_id}">اسم العميل: جاري الجلب...</div>
-                            <div class="text-gray-500 text-xs font-medium">رقم الهاتف: ${order.user_number || 'غير متوفر'}</div>
+                            <div class="text-gray-500 text-xs font-medium">رقم الهاتف: ${escapeHtml(order.user_number) || 'غير متوفر'}</div>
                             <div class="text-gray-500 text-xs font-medium" id="client-whats-${order.order_id}">رقم الواتساب: جاري الجلب...</div>
                             
-                            ${isAdminApproval ? `<div class="text-[#E65100] font-bold text-sm mt-1 border-t pt-1">مستلم الطلب: ${order.order_receiving_by || 'غير محدد'}</div>` : ''}
+                            ${isAdminApproval ? `<div class="text-[#E65100] font-bold text-sm mt-1 border-t pt-1">مستلم الطلب: ${escapeHtml(order.order_receiving_by) || 'غير محدد'}</div>` : ''}
                             
                             <div class="mt-2 font-extrabold text-sm ${statusColor}">الحالة: ${statusText}</div>
                             <div class="text-gray-500 text-[11px] font-semibold">تاريخ الحالة: ${statusDate}</div>
                         </div>
                         <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 border border-gray-200">
-                            <i id="icon-${order.order_id}" class="fas fa-chevron-down text-[#0D1B6D]"></i>
+                            <i id="icon-${order.order_id}" class="fas ${iconState} text-[#0D1B6D]"></i>
                         </div>
                     </div>
 
-                    <div id="details-${order.order_id}" class="order-details border-t border-gray-200 bg-white">
+                    <div id="details-${order.order_id}" class="order-details ${detailsState} border-t border-gray-200 bg-white">
                         <div class="p-4">
                             <h3 class="font-bold text-[#42A5F5] mb-4">القطع المطلوبة وتسعيرها:</h3>
                             ${itemsHtml}
@@ -373,10 +421,20 @@
             container.innerHTML = finalHtml + '</div>';
         }
 
+        // دالة الفتح والإغلاق التي تقوم أيضاً بتحديث المتغير openOrders
         function toggleDetails(orderId) {
-            const detailsDiv = document.getElementById('details-' + orderId), icon = document.getElementById('icon-' + orderId);
-            detailsDiv.classList.toggle('open');
-            icon.classList.toggle('fa-chevron-down'); icon.classList.toggle('fa-chevron-up');
+            const detailsDiv = document.getElementById('details-' + orderId);
+            const icon = document.getElementById('icon-' + orderId);
+            
+            if (detailsDiv.classList.contains('open')) {
+                detailsDiv.classList.remove('open');
+                icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+                openOrders.delete(orderId);
+            } else {
+                detailsDiv.classList.add('open');
+                icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+                openOrders.add(orderId);
+            }
         }
 
         function updateOrderField(orderId, field, value) {
@@ -384,34 +442,31 @@
             db.collection('orders').doc(orderId).update({ [field]: val });
         }
 
-        // 🌟 التحديث الذكي: التحديث في الـ Array والـ Subcollection لضمان توافق الداتا القديمة والجديدة
         function updateSubItem(orderId, itemId, field, value) {
             let val = field.includes('price') ? (parseFloat(value) || 0) : value;
             let order = ordersData.find(o => o.order_id === orderId);
             
             if (order) {
-                // 1. تحديث المصفوفة القديمة إن وُجدت
                 if (order.items) {
                     let itemIndex = order.items.findIndex(i => i.item_id === itemId);
                     if (itemIndex !== -1) {
                         order.items[itemIndex][field] = val;
-                        db.collection('orders').doc(orderId).update({ items: order.items }).catch(e => console.log(e));
+                        db.collection('orders').doc(orderId).update({ items: order.items }).catch(()=>{});
                     }
                 }
-                // 2. تحديث النظام الجديد (Subcollection)
-                if (itemId && itemId !== 'undefined') {
+                if (itemId && !itemId.startsWith("LEGACY-")) {
                     db.collection('orders').doc(orderId).collection('items').doc(itemId).set({
                         [field]: val
-                    }, { merge: true }).catch(e => console.log(e));
+                    }, { merge: true }).catch(()=>{});
                 }
             }
         }
 
-        // 🌟 التحديث الذكي: إضافة قطعة جديدة للمصفوفة القديمة والـ Subcollection معاً
         function addNewSubItem(orderId) {
             let order = ordersData.find(o => o.order_id === orderId);
             if (order) {
-                let newItemId = "ITEM-" + Date.now();
+                let newItemRef = db.collection('orders').doc(orderId).collection('items').doc();
+                let newItemId = newItemRef.id;
                 let baseItem = order.items && order.items.length > 0 ? order.items[0] : null;
                 
                 let newItem = {
@@ -429,33 +484,30 @@
                     comments: ""
                 };
                 
-                // إضافة للنظام القديم Array
+                openOrders.add(orderId); // المحافظة على النافذة مفتوحة
+                
                 if (order.items) {
                     order.items.push(newItem);
                     db.collection('orders').doc(orderId).update({ items: order.items });
                 }
                 
-                // إضافة للنظام الجديد Subcollection
-                db.collection('orders').doc(orderId).collection('items').doc(newItemId).set(newItem).then(() => {
-                    let d = document.getElementById('details-' + orderId);
-                    if (d && !d.classList.contains('open')) toggleDetails(orderId);
-                    renderOrders(); // إعادة رسم الشاشة لتظهر القطعة الجديدة فوراً
-                });
+                newItemRef.set(newItem);
             }
         }
 
         function deleteItem(orderId, itemId) {
             if (confirm("هل أنت متأكد من حذف هذا الصنف؟")) {
                 let order = ordersData.find(o => o.order_id === orderId);
-                // حذف من المصفوفة القديمة
+                openOrders.add(orderId);
+                
                 if (order && order.items) {
                     order.items = order.items.filter(i => i.item_id !== itemId);
                     db.collection('orders').doc(orderId).update({ items: order.items });
                 }
-                // حذف من النظام الجديد Subcollection
-                db.collection('orders').doc(orderId).collection('items').doc(itemId).delete().then(() => {
-                    renderOrders();
-                });
+                
+                if (itemId && !itemId.startsWith("LEGACY-")) {
+                    db.collection('orders').doc(orderId).collection('items').doc(itemId).delete();
+                }
             }
         }
 
