@@ -138,7 +138,8 @@
         };
 
         function fetchClients() {
-            db.collection('clients').onSnapshot((snapshot) => {
+            // التعديل هنا: جلب البيانات من جدول users
+            db.collection('users').onSnapshot((snapshot) => {
                 clientsData = [];
                 snapshot.forEach((doc) => {
                     let data = doc.data();
@@ -234,7 +235,8 @@
 
             if(!display_name || !phone_number) return showToast("يرجى إدخال اسم العميل ورقم الهاتف", false);
 
-            db.collection('clients').add({
+            // التعديل هنا: الإضافة في جدول users
+            db.collection('users').add({
                 display_name, 
                 phone_number, 
                 type,
@@ -246,7 +248,7 @@
                 banned_status: false, 
                 fcm_token: "", 
                 commercial_document_image: "",
-                created_at: firebase.firestore.FieldValue.serverTimestamp() // استخدام طابع زمني دقيق
+                created_at: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => { 
                 closeModal('add-modal'); 
                 showToast("تمت الإضافة بنجاح"); 
@@ -259,7 +261,8 @@
         function updateClient(id) {
             let type = document.querySelector('input[name="type-' + id + '"]:checked').value;
             
-            db.collection('clients').doc(id).update({
+            // التعديل هنا: التحديث في جدول users
+            db.collection('users').doc(id).update({
                 type,
                 display_name: document.getElementById('edit-name-' + id).value,
                 phone_number: document.getElementById('edit-phone-' + id).value,
@@ -270,7 +273,7 @@
                 number_of_rejections: parseInt(document.getElementById('edit-rej-' + id).value) || 0,
                 banned_status: document.getElementById('edit-ban-' + id).checked,
                 fcm_token: document.getElementById('edit-token-' + id).value,
-                updated_at: firebase.firestore.FieldValue.serverTimestamp() // إضافة طابع التحديث
+                updated_at: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => { 
                 toggleDetails(id); 
                 showToast("تم التحديث بنجاح"); 
@@ -284,7 +287,8 @@
             let client = clientsData.find(c => c.user_id === id);
             let newStatus = client.status === 'active' ? 'not_active' : 'active';
             
-            db.collection('clients').doc(id).update({ 
+            // التعديل هنا: تحديث الحالة في جدول users
+            db.collection('users').doc(id).update({ 
                 status: newStatus,
                 updated_at: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => {
@@ -304,7 +308,8 @@
         function executeDelete() {
             if (!clientToDeleteId) return;
             
-            db.collection('clients').doc(clientToDeleteId).delete().then(() => { 
+            // التعديل هنا: الحذف من جدول users
+            db.collection('users').doc(clientToDeleteId).delete().then(() => { 
                 closeModal('delete-modal'); 
                 showToast("تم الحذف بنجاح"); 
                 clientToDeleteId = null;
