@@ -41,7 +41,8 @@
         </header>
 
         <div class="flex bg-white px-4 border-b border-gray-200 sticky top-0 z-10 shadow-sm overflow-x-auto" id="tabsContainer">
-            <button id="btn-tab-category" onclick="switchTab('category')" class="px-6 py-4 font-bold border-b-4 border-[#0D1B6D] text-[#0D1B6D] transition-colors whitespace-nowrap">أقسام قطع الغيار</button>
+            <!-- تم تعديل اسم التاب و الـ ID ليناسب spare_parts_categories -->
+            <button id="btn-tab-spare_parts_categories" onclick="switchTab('spare_parts_categories')" class="px-6 py-4 font-bold border-b-4 border-[#0D1B6D] text-[#0D1B6D] transition-colors whitespace-nowrap">أسماء قطع الغيار</button>
             <button id="btn-tab-brand" onclick="switchTab('brand')" class="px-6 py-4 font-bold border-b-4 border-transparent text-gray-500 hover:text-gray-800 transition-colors whitespace-nowrap">الماركات</button>
             <button id="btn-tab-quality" onclick="switchTab('quality')" class="px-6 py-4 font-bold border-b-4 border-transparent text-gray-500 hover:text-gray-800 transition-colors whitespace-nowrap">أنواع الجودة</button>
             <button id="btn-tab-location" onclick="switchTab('location')" class="px-6 py-4 font-bold border-b-4 border-transparent text-gray-500 hover:text-gray-800 transition-colors whitespace-nowrap">المحافظات</button>
@@ -91,23 +92,30 @@
 
     <!-- استدعاء الفايربيس والمصادقة -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> <!-- السطر المضاف -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
     <script>
-        const firebaseConfig = { apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg", authDomain: "souqalghiyar.firebaseapp.com", projectId: "souqalghiyar", storageBucket: "souqalghiyar.firebasestorage.app", messagingSenderId: "186585426069", appId: "1:186585426069:web:9f34cedeee498d1bd3539c" };
+        const firebaseConfig = { 
+            apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg", 
+            authDomain: "souqalghiyar.firebaseapp.com", 
+            projectId: "souqalghiyar", 
+            storageBucket: "souqalghiyar.firebasestorage.app", 
+            messagingSenderId: "186585426069", 
+            appId: "1:186585426069:web:9f34cedeee498d1bd3539c" 
+        };
+        
         if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.firestore();
 
-        let currentTab = 'category', deleteTargetId = null;
-        let categories = [], brands = [], qualities = [], locations = [];
+        let currentTab = 'spare_parts_categories', deleteTargetId = null;
+        let sparePartsCategories = [], brands = [], qualities = [], locations = [];
 
-        // التعديل هنا: جلب البيانات فقط بعد التأكد من حالة تسجيل الدخول
         window.onload = function() {
             firebase.auth().onAuthStateChanged(function(user) {
                 if (user) {
                     fetchConstants();
-                    switchTab('category');
+                    switchTab('spare_parts_categories');
                 } else {
                     window.location.href = "index.html";
                 }
@@ -115,7 +123,7 @@
         };
 
         function fetchConstants() {
-            db.collection('categories').onSnapshot(snap => { categories = snap.docs.map(d => ({id: d.id, ...d.data()})); if(currentTab==='category') renderData(); });
+            db.collection('spare_parts_categories').onSnapshot(snap => { sparePartsCategories = snap.docs.map(d => ({id: d.id, ...d.data()})); if(currentTab==='spare_parts_categories') renderData(); });
             db.collection('brands').onSnapshot(snap => { brands = snap.docs.map(d => ({id: d.id, ...d.data()})); if(currentTab==='brand') renderData(); });
             db.collection('qualities').onSnapshot(snap => { qualities = snap.docs.map(d => ({id: d.id, ...d.data()})); if(currentTab==='quality') renderData(); });
             db.collection('locations').onSnapshot(snap => { locations = snap.docs.map(d => ({id: d.id, ...d.data()})); if(currentTab==='location') renderData(); });
@@ -123,7 +131,7 @@
 
         function switchTab(tab) {
             currentTab = tab;
-            let tabsList = ['category', 'brand', 'quality', 'location'];
+            let tabsList = ['spare_parts_categories', 'brand', 'quality', 'location'];
             for(let i=0; i<tabsList.length; i++) {
                 document.getElementById('btn-tab-' + tabsList[i]).className = tabsList[i] === tab 
                     ? "px-6 py-4 font-bold border-b-4 transition-colors whitespace-nowrap border-[#0D1B6D] text-[#0D1B6D]"
@@ -133,12 +141,12 @@
         }
 
         function getActiveArray() {
-            return currentTab === 'category' ? categories : currentTab === 'brand' ? brands : currentTab === 'quality' ? qualities : locations;
+            return currentTab === 'spare_parts_categories' ? sparePartsCategories : currentTab === 'brand' ? brands : currentTab === 'quality' ? qualities : locations;
         }
 
         function renderData() {
             let dataArray = getActiveArray();
-            let emptyMsg = currentTab === 'category' ? "لا توجد أقسام" : currentTab === 'brand' ? "لا توجد ماركات" : currentTab === 'quality' ? "لا توجد أنواع جودة" : "لا توجد محافظات";
+            let emptyMsg = currentTab === 'spare_parts_categories' ? "لا توجد أسماء قطع غيار" : currentTab === 'brand' ? "لا توجد ماركات" : currentTab === 'quality' ? "لا توجد أنواع جودة" : "لا توجد محافظات";
             let htmlStr = '';
 
             if (dataArray.length === 0) {
@@ -146,7 +154,10 @@
             } else {
                 for (let i = 0; i < dataArray.length; i++) {
                     let item = dataArray[i];
-                    htmlStr += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex justify-between items-center hover:shadow-md transition-shadow"><div class="flex-1"><h3 class="text-lg font-bold text-[#0D1B6D]">' + item.name + '</h3>';
+                    // عرض الاسم بناءً على نوع الجدول (لجدول أسماء القطع نقرأ حقل spare_parts_categories)
+                    let displayTitle = currentTab === 'spare_parts_categories' ? (item.spare_parts_categories || '') : (item.name || '');
+                    
+                    htmlStr += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex justify-between items-center hover:shadow-md transition-shadow"><div class="flex-1"><h3 class="text-lg font-bold text-[#0D1B6D]">' + displayTitle + '</h3>';
                     if(currentTab === 'brand' && item.spec) htmlStr += '<div class="text-gray-500 text-sm mt-1">مكان التصنيع: ' + item.spec + '</div>';
                     htmlStr += '</div><div class="flex gap-2"><button onclick="openFormModal(\'' + item.id + '\')" class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><i class="fas fa-pen"></i></button><button onclick="openDeleteModal(\'' + item.id + '\')" class="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center"><i class="fas fa-trash"></i></button></div></div>';
                 }
@@ -166,7 +177,8 @@
                 document.getElementById('modal-title').innerText = "تعديل البيانات";
                 let item = getActiveArray().find(x => x.id === id);
                 document.getElementById('item-id').value = item.id;
-                document.getElementById('item-name').value = item.name;
+                // تعبئة حقل الإدخال بالاسم المناسب للجدول الحالي
+                document.getElementById('item-name').value = currentTab === 'spare_parts_categories' ? (item.spare_parts_categories || "") : (item.name || "");
                 document.getElementById('item-spec').value = item.spec || "";
             } else {
                 document.getElementById('modal-title').innerText = "إضافة جديدة";
@@ -178,22 +190,39 @@
         }
 
         function getActiveCollectionName() {
-            return currentTab === 'category' ? 'categories' : currentTab === 'brand' ? 'brands' : currentTab === 'quality' ? 'qualities' : 'locations';
+            return currentTab === 'spare_parts_categories' ? 'spare_parts_categories' : currentTab === 'brand' ? 'brands' : currentTab === 'quality' ? 'qualities' : 'locations';
         }
 
         function saveData() {
             let id = document.getElementById('item-id').value;
-            let name = document.getElementById('item-name').value.trim();
-            if(!name) return alert("يرجى إدخال الاسم");
+            let nameValue = document.getElementById('item-name').value.trim();
+            if(!nameValue) return alert("يرجى إدخال الاسم");
 
-            let dataObj = { name: name };
+            // تخصيص المفتاح بناءً على متطلبات الجدول (إنشاء حقل spare_parts_categories)
+            let dataObj = {};
+            if (currentTab === 'spare_parts_categories') {
+                dataObj = { spare_parts_categories: nameValue };
+            } else {
+                dataObj = { name: nameValue };
+            }
+            
             if(currentTab === 'brand') dataObj.spec = document.getElementById('item-spec').value.trim();
 
             let colName = getActiveCollectionName();
             if (id) {
-                db.collection(colName).doc(id).update(dataObj).then(() => { closeModal('form-modal'); showToast("تم التعديل"); });
+                db.collection(colName).doc(id).update(dataObj).then(() => { 
+                    closeModal('form-modal'); 
+                    showToast("تم التعديل"); 
+                }).catch(err => {
+                    alert("حدث خطأ أثناء التعديل");
+                });
             } else {
-                db.collection(colName).add(dataObj).then(() => { closeModal('form-modal'); showToast("تم الحفظ بنجاح"); });
+                db.collection(colName).add(dataObj).then(() => { 
+                    closeModal('form-modal'); 
+                    showToast("تم الحفظ بنجاح"); 
+                }).catch(err => {
+                    alert("حدث خطأ أثناء الإضافة");
+                });
             }
         }
 
@@ -205,7 +234,10 @@
 
         function executeDelete() {
             db.collection(getActiveCollectionName()).doc(deleteTargetId).delete().then(() => {
-                closeModal('delete-modal'); showToast("تم الحذف بنجاح");
+                closeModal('delete-modal'); 
+                showToast("تم الحذف بنجاح");
+            }).catch(err => {
+                alert("حدث خطأ أثناء الحذف");
             });
         }
 
