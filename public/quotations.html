@@ -72,7 +72,6 @@
     </div>
 
     <div id="form-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
-        <!-- (محتوى النافذة كما هو) -->
         <div class="bg-white text-gray-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto flex flex-col">
             <div class="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
                 <h3 id="modal-title" class="text-xl font-bold text-[#0D1B6D]">إضافة فاتورة جديدة</h3>
@@ -95,7 +94,6 @@
     </div>
 
     <div id="delete-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
-        <!-- (محتوى نافذة الحذف كما هو) -->
         <div class="bg-white text-gray-900 rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
             <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-exclamation-triangle text-3xl text-red-600"></i></div>
             <h3 class="text-xl font-bold text-gray-800 mb-2">تأكيد الحذف</h3>
@@ -113,18 +111,24 @@
 
     <!-- استدعاء فايربيس مع مكتبة الـ Auth -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> <!-- السطر المضاف -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
     <script>
-        const firebaseConfig = { apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg", authDomain: "souqalghiyar.firebaseapp.com", projectId: "souqalghiyar", storageBucket: "souqalghiyar.firebasestorage.app", messagingSenderId: "186585426069", appId: "1:186585426069:web:9f34cedeee498d1bd3539c" };
+        const firebaseConfig = { 
+            apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg", 
+            authDomain: "souqalghiyar.firebaseapp.com", 
+            projectId: "souqalghiyar", 
+            storageBucket: "souqalghiyar.firebasestorage.app", 
+            messagingSenderId: "186585426069", 
+            appId: "1:186585426069:web:9f34cedeee498d1bd3539c" 
+        };
         if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.firestore();
 
         let quotationsData = [];
         let deleteTargetId = null;
 
-        // التعديل هنا: دالة window.onload محاطة بفحص Auth
         window.onload = function() {
             firebase.auth().onAuthStateChanged(function(user) {
                 if (user) {
@@ -136,7 +140,8 @@
         };
 
         function fetchQuotations() {
-            db.collection('quotations').orderBy('created_at', 'desc').onSnapshot((snapshot) => {
+            // التعديل هنا: جلب البيانات من جدول quotation_prices
+            db.collection('quotation_prices').orderBy('created_at', 'desc').onSnapshot((snapshot) => {
                 quotationsData = [];
                 snapshot.forEach((doc) => {
                     let data = doc.data();
@@ -144,6 +149,9 @@
                     quotationsData.push(data);
                 });
                 renderQuotations();
+            }, (error) => {
+                console.error("Error fetching quotations:", error);
+                showToast("حدث خطأ في جلب البيانات", false);
             });
         }
 
@@ -206,10 +214,25 @@
             let payload = { part_name, trader_name, quotation_number, quotation_price };
 
             if (id) {
-                db.collection('quotations').doc(id).update(payload).then(() => { closeModal('form-modal'); showToast("تم التعديل بنجاح", true); });
+                // التعديل هنا: التحديث في جدول quotation_prices
+                payload.updated_at = firebase.firestore.FieldValue.serverTimestamp();
+                db.collection('quotation_prices').doc(id).update(payload).then(() => { 
+                    closeModal('form-modal'); 
+                    showToast("تم التعديل بنجاح", true); 
+                }).catch((error) => {
+                    console.error("Update Error:", error);
+                    showToast("حدث خطأ أثناء التعديل", false);
+                });
             } else {
-                payload.created_at = new Date().toISOString();
-                db.collection('quotations').add(payload).then(() => { closeModal('form-modal'); showToast("تمت الإضافة بنجاح", true); });
+                // التعديل هنا: الإضافة في جدول quotation_prices واستخدام الطابع الزمني الموحد
+                payload.created_at = firebase.firestore.FieldValue.serverTimestamp();
+                db.collection('quotation_prices').add(payload).then(() => { 
+                    closeModal('form-modal'); 
+                    showToast("تمت الإضافة بنجاح", true); 
+                }).catch((error) => {
+                    console.error("Add Error:", error);
+                    showToast("حدث خطأ أثناء الإضافة", false);
+                });
             }
         }
 
@@ -217,8 +240,13 @@
             deleteTargetId = id;
             openModal('delete-modal');
             document.getElementById('confirm-delete-btn').onclick = () => {
-                db.collection('quotations').doc(deleteTargetId).delete().then(() => {
-                    closeModal('delete-modal'); showToast("تم حذف الفاتورة بنجاح", true);
+                // التعديل هنا: الحذف من جدول quotation_prices
+                db.collection('quotation_prices').doc(deleteTargetId).delete().then(() => {
+                    closeModal('delete-modal'); 
+                    showToast("تم حذف الفاتورة بنجاح", true);
+                }).catch((error) => {
+                    console.error("Delete Error:", error);
+                    showToast("حدث خطأ أثناء الحذف", false);
                 });
             };
         }
