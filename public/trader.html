@@ -94,29 +94,37 @@
             <p class="text-gray-500 mb-6" id="delete-message">هل أنت متأكد من حذف هذا التاجر؟</p>
             <div class="flex gap-3 justify-center">
                 <button onclick="closeModal('delete-modal')" class="flex-1 px-4 py-2 bg-gray-100 font-bold rounded-lg">إلغاء</button>
-                <button id="confirm-delete-btn" class="flex-1 px-4 py-2 bg-red-600 text-white font-bold rounded-lg">حذف</button>
+                <!-- تم إضافة دالة الحذف هنا -->
+                <button id="confirm-delete-btn" onclick="executeDelete()" class="flex-1 px-4 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors">حذف</button>
             </div>
         </div>
     </div>
 
     <div id="toast-message" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg hidden-element transition-opacity z-50 flex items-center gap-2">
-        <i class="fas fa-check-circle text-green-400"></i> <span id="toast-text"></span>
+        <i class="fas fa-check-circle text-green-400" id="toast-icon"></i> <span id="toast-text"></span>
     </div>
 
     <!-- Firebase + Auth -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> <!-- تمت الإضافة -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
     <script>
-        const firebaseConfig = { apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg", authDomain: "souqalghiyar.firebaseapp.com", projectId: "souqalghiyar", storageBucket: "souqalghiyar.firebasestorage.app", messagingSenderId: "186585426069", appId: "1:186585426069:web:9f34cedeee498d1bd3539c" };
+        const firebaseConfig = { 
+            apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg", 
+            authDomain: "souqalghiyar.firebaseapp.com", 
+            projectId: "souqalghiyar", 
+            storageBucket: "souqalghiyar.firebasestorage.app", 
+            messagingSenderId: "186585426069", 
+            appId: "1:186585426069:web:9f34cedeee498d1bd3539c" 
+        };
+        
         if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.firestore();
 
         let tradersData = [];
         let traderToDeleteId = null;
 
-        // التأكد من المصادقة قبل جلب البيانات
         window.onload = function() {
             firebase.auth().onAuthStateChanged(function(user) {
                 if (user) {
@@ -136,6 +144,9 @@
                     tradersData.push(data);
                 });
                 renderTraders();
+            }, (error) => {
+                console.error("Error fetching traders: ", error);
+                showToast("حدث خطأ في جلب البيانات", "error");
             });
         }
 
@@ -200,7 +211,10 @@
             let name = document.getElementById('trader-name').value.trim();
             let primary = document.getElementById('trader-primary').value.trim();
             
-            if(!name || !primary) return alert("يرجى تعبئة الحقول الإجبارية (الاسم والرقم الأساسي)");
+            if(!name || !primary) {
+                alert("يرجى تعبئة الحقول الإجبارية (الاسم والرقم الأساسي)");
+                return;
+            }
 
             let traderData = {
                 trader_name: name,
@@ -208,13 +222,27 @@
                 secondary_number: document.getElementById('trader-secondary').value.trim(),
                 location: document.getElementById('trader-location').value.trim(),
                 name: document.getElementById('trader-emp').value.trim(),
-                note: document.getElementById('trader-note').value.trim()
+                note: document.getElementById('trader-note').value.trim(),
+                updated_at: firebase.firestore.FieldValue.serverTimestamp() // تحديث الطابع الزمني
             };
 
             if (id) {
-                db.collection('traders').doc(id).update(traderData).then(() => { closeModal('trader-modal'); showToast("تم التعديل بنجاح"); });
+                db.collection('traders').doc(id).update(traderData).then(() => { 
+                    closeModal('trader-modal'); 
+                    showToast("تم التعديل بنجاح"); 
+                }).catch((error) => {
+                    console.error("Update error: ", error);
+                    showToast("حدث خطأ أثناء التعديل", "error");
+                });
             } else {
-                db.collection('traders').add(traderData).then(() => { closeModal('trader-modal'); showToast("تم إضافة التاجر بنجاح"); });
+                traderData.created_at = firebase.firestore.FieldValue.serverTimestamp(); // إنشاء الطابع الزمني
+                db.collection('traders').add(traderData).then(() => { 
+                    closeModal('trader-modal'); 
+                    showToast("تم إضافة التاجر بنجاح"); 
+                }).catch((error) => {
+                    console.error("Add error: ", error);
+                    showToast("حدث خطأ أثناء الإضافة", "error");
+                });
             }
         }
 
@@ -225,9 +253,15 @@
         }
 
         function executeDelete() {
+            if (!traderToDeleteId) return;
+            
             db.collection('traders').doc(traderToDeleteId).delete().then(() => {
                 closeModal('delete-modal');
                 showToast("تم الحذف بنجاح");
+                traderToDeleteId = null;
+            }).catch((error) => {
+                console.error("Delete error: ", error);
+                showToast("حدث خطأ أثناء الحذف", "error");
             });
         }
 
@@ -253,9 +287,20 @@
             }).catch(() => { window.location.href = "tel:" + number; });
         }
 
-        function showToast(message) {
+        function showToast(message, type = "success") {
             let toast = document.getElementById('toast-message');
+            let icon = document.getElementById('toast-icon');
+            
             document.getElementById('toast-text').innerText = message;
+            
+            if (type === "error") {
+                toast.classList.replace('bg-gray-800', 'bg-red-600');
+                icon.className = 'fas fa-times-circle text-white';
+            } else {
+                toast.classList.replace('bg-red-600', 'bg-gray-800');
+                icon.className = 'fas fa-check-circle text-green-400';
+            }
+
             toast.classList.remove('hidden-element');
             setTimeout(() => toast.classList.add('hidden-element'), 3000);
         }
