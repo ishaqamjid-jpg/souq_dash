@@ -12,9 +12,17 @@
         body { font-family: 'Tajawal', sans-serif; }
         .order-details { display: none; }
         .order-details.open { display: block; }
+        /* لتنسيق التمرير */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
 </head>
 <body class="bg-gray-50 flex h-screen overflow-hidden">
+
+    <!-- قائمة التجار المنسدلة (تُعبأ برمجياً) -->
+    <datalist id="traders-list"></datalist>
 
     <!-- القائمة الجانبية -->
     <aside class="w-64 bg-gray-900 text-white flex flex-col shrink-0 shadow-lg z-20">
@@ -32,10 +40,11 @@
         </div>
     </aside>
 
-    <div class="flex-1 flex flex-col overflow-hidden">
+    <div class="flex-1 flex flex-col overflow-hidden relative">
         <header class="h-16 bg-white shadow-sm flex items-center justify-between px-8 shrink-0 z-10 border-b border-gray-200">
             <h2 class="text-xl font-bold text-gray-800">إدارة الطلبات</h2>
             <div class="flex items-center gap-6">
+                <div class="text-sm font-bold text-gray-600" id="adminNameDisplay"></div>
                 <button onclick="fetchOrders()" class="text-blue-600 hover:text-blue-800 font-bold transition flex items-center gap-2">
                     <i class="fas fa-sync-alt"></i> تحديث البيانات
                 </button>
@@ -48,11 +57,33 @@
         </main>
     </div>
 
-    <!-- استدعاء فايربيس (مع Auth) -->
+    <!-- نافذة إلغاء الطلب (لمرحلة جاري التوصيل) -->
+    <div id="cancelModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-[400px] max-w-[90%]">
+            <h3 class="text-xl font-bold text-red-600 mb-4">إلغاء الطلب</h3>
+            <input type="hidden" id="cancelOrderId">
+            <input type="hidden" id="cancelOrderUserId">
+            <input type="hidden" id="cancelOrderNumber">
+            
+            <label class="block text-sm font-bold text-gray-700 mb-2">سبب الإلغاء:</label>
+            <textarea id="cancelNotes" class="w-full border border-gray-300 rounded p-3 mb-4 focus:outline-none focus:border-red-500" rows="3" placeholder="اكتب سبب إلغاء الطلب..."></textarea>
+            
+            <label class="flex items-center gap-2 mb-6 cursor-pointer">
+                <input type="checkbox" id="incrementRejection" class="w-5 h-5 accent-red-600 rounded">
+                <span class="text-sm font-bold text-gray-700">إضافة إلى عداد الرفض للعميل</span>
+            </label>
+            
+            <div class="flex gap-3">
+                <button onclick="confirmCancelGoingOrder()" class="flex-1 bg-red-600 text-white font-bold py-2.5 rounded hover:bg-red-700">تأكيد الإلغاء</button>
+                <button onclick="closeCancelModal()" class="flex-1 bg-gray-200 text-gray-800 font-bold py-2.5 rounded hover:bg-gray-300">تراجع</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- استدعاء فايربيس -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> <!-- تمت الإضافة -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 
     <script>
         const firebaseConfig = {
@@ -66,29 +97,80 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         
         const db = firebase.firestore();
-        const messaging = firebase.messaging();
 
+        // التابات المطابقة تماماً لـ Android (عدا المكتملة والمرفوضة)
         const tabs = [
             { id: 'pending', label: 'المعلقة' },
             { id: 'waiting admin approvel', label: 'الموافقة الإدارية' },
-            { id: 'waiting for approvel', label: 'قيد موافقة العميل' },
+            { id: 'waiting for approvel', label: 'قيد الموافقة' },
             { id: 'going', label: 'جاري التوصيل' }
         ];
         
         let currentTab = 'pending';
         let ordersData = [];
+        let clientsData = {}; // تخزين بيانات العملاء مؤقتاً
+        let adminUsername = "مدير النظام"; // يتحدث من Auth
 
-        // التأكد من المصادقة قبل جلب البيانات
         window.onload = function() {
             firebase.auth().onAuthStateChanged(function(user) {
                 if (user) {
+                    adminUsername = user.displayName || user.email.split('@')[0];
+                    document.getElementById('adminNameDisplay').innerText = `أهلاً، ${adminUsername}`;
+                    fetchTradersList();
                     fetchOrders();
-                    requestNotificationPermission();
                 } else {
                     window.location.href = "index.html";
                 }
             });
         };
+
+        // جلب أسماء التجار للقائمة المنسدلة
+        function fetchTradersList() {
+            db.collection('traders_management').onSnapshot(snap => {
+                const list = document.getElementById('traders-list');
+                list.innerHTML = '';
+                snap.forEach(doc => {
+                    let name = doc.data().trader_name;
+                    if(name) {
+                        let option = document.createElement('option');
+                        option.value = name;
+                        list.appendChild(option);
+                    }
+                });
+            });
+        }
+
+        // جلب بيانات العميل (اسم و واتساب)
+        async function fetchClientInfo(userId, orderId) {
+            if (!userId) return;
+            if (clientsData[userId]) {
+                updateClientDOM(orderId, clientsData[userId]);
+                return;
+            }
+            try {
+                let doc = await db.collection('users').doc(userId).get();
+                if (doc.exists) {
+                    let data = doc.data();
+                    let name = data.type === 'تجاري' ? (data.trade_name || 'غير متوفر') : (data.display_name || 'غير متوفر');
+                    let whats = data.whats_number || 'غير متوفر';
+                    clientsData[userId] = { name: name, whats: whats };
+                    updateClientDOM(orderId, clientsData[userId]);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function updateClientDOM(orderId, client) {
+            let nameEl = document.getElementById(`client-name-${orderId}`);
+            let whatsEl = document.getElementById(`client-whats-${orderId}`);
+            if(nameEl) nameEl.innerText = `اسم العميل: ${client.name}`;
+            if(whatsEl) whatsEl.innerText = `رقم الواتساب: ${client.whats}`;
+        }
+
+        function formatDateTime(timestamp) {
+            if (!timestamp) return 'غير محدد';
+            let date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true });
+        }
 
         function renderTabs() {
             const tabsContainer = document.getElementById('tabsContainer');
@@ -97,16 +179,48 @@
                 let isActive = tab.id === currentTab;
                 let button = document.createElement('button');
                 let activeClass = isActive ? 'border-[#4CAF50] text-white bg-white/5' : 'border-transparent hover:text-white hover:bg-white/5';
-                button.className = 'px-8 py-3.5 font-bold transition-colors duration-300 border-b-4 whitespace-nowrap text-[15px] ' + activeClass;
+                button.className = 'px-8 py-3.5 font-bold transition-colors duration-300 border-b-4 whitespace-nowrap text-[14px] ' + activeClass;
                 button.innerText = tab.label;
                 button.onclick = () => { currentTab = tab.id; renderTabs(); renderOrders(); };
                 tabsContainer.appendChild(button);
             });
         }
 
+        // جلب الطلبات بالإضافة للـ Subcollection الخاصة بالـ Items
+        function fetchOrders() {
+            renderTabs();
+            document.getElementById('ordersContainer').innerHTML = '<div class="flex justify-center py-20"><i class="fas fa-spinner fa-spin text-4xl text-[#0D1B6D]"></i></div>';
+            
+            db.collection('orders').onSnapshot(async (snapshot) => {
+                ordersData = [];
+                if (!snapshot.empty) {
+                    for (let doc of snapshot.docs) {
+                        let order = doc.data();
+                        order.order_id = doc.id;
+                        order.order_status = (order.order_status || 'pending').toLowerCase().trim();
+                        
+                        // جلب الـ items من الـ Subcollection كما في الأندرويد
+                        let itemsSnap = await db.collection('orders').doc(order.order_id).collection('items').get();
+                        order.items = itemsSnap.docs.map(iDoc => {
+                            let itemData = iDoc.data();
+                            itemData.item_id = iDoc.id; 
+                            return itemData;
+                        });
+                        
+                        ordersData.push(order);
+                        // جلب بيانات العميل
+                        fetchClientInfo(order.user_id, order.order_id);
+                    }
+                }
+                // ترتيب حسب تاريخ الإنشاء (الأحدث أولاً)
+                ordersData.sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
+                renderOrders();
+            });
+        }
+
         function renderOrders() {
             const container = document.getElementById('ordersContainer');
-            const filteredOrders = ordersData.filter(o => o.order_status === currentTab);
+            const filteredOrders = ordersData.filter(o => o.order_status === currentTab || (currentTab === 'waiting for approvel' && (o.order_status === 'waiting for approval' || o.order_status === 'waiting for approvel')));
 
             if (filteredOrders.length === 0) {
                 container.innerHTML = '<div class="flex flex-col items-center justify-center py-20 text-gray-400"><i class="fas fa-box-open text-6xl mb-4"></i><div class="text-xl font-bold">لا توجد طلبات هنا حالياً</div></div>';
@@ -120,38 +234,136 @@
                 let isGoing = currentTab === 'going';
 
                 let statusText = isPending ? 'معلق قيد التسعير' : isAdminApproval ? 'بانتظار الموافقة الإدارية' : isGoing ? 'جاري التوصيل' : 'بانتظار موافقة العميل';
-                let statusColor = isPending ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : isAdminApproval ? 'bg-orange-100 text-orange-800 border-orange-200' : isGoing ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-green-100 text-green-800 border-green-200';
+                let statusColor = isPending ? 'text-[#FFB300]' : isGoing ? 'text-[#03A9F4]' : 'text-[#4CAF50]';
 
-                order.items = order.items || [];
+                let orderDate = formatDateTime(order.created_at);
+                let statusDate = formatDateTime(order.order_status_date);
+
                 let itemsHtml = '';
-                
-                order.items.forEach((item, j) => {
-                    let bgClass = j % 2 !== 0 ? 'bg-gray-50' : 'bg-white';
-                    let disabledAttr = (isPending || isAdminApproval || isGoing) ? '' : 'disabled';
+                (order.items || []).forEach(item => {
+                    let disabledAttr = (isPending || isAdminApproval || isGoing) ? '' : 'disabled readonly class="bg-gray-100 cursor-not-allowed border p-2 rounded"';
+                    let inputClass = "border border-gray-300 p-2 rounded focus:outline-none focus:border-[#0D1B6D] w-full text-sm";
                     
-                    let nameField = isPending ? '<input type="text" class="border border-gray-300 p-2 w-full rounded focus:outline-none focus:border-blue-500 font-medium" value="' + (item.part_name || '') + '" onchange="updateItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'part_name\', this.value)">' : (item.part_name || '');
-                    let pricingFields = (isPending || isAdminApproval) ? '<td class="p-3"><input type="number" class="border border-gray-300 p-2 w-28 text-center rounded focus:border-blue-500" value="' + (item.quotation_price || '') + '" onchange="updateItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'quotation_price\', this.value)"></td><td class="p-3"><input type="number" class="border border-gray-300 p-2 w-28 text-center rounded focus:border-blue-500 text-green-700" value="' + (item.selling_price || '') + '" onchange="updateItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'selling_price\', this.value)"></td>' : '';
-                    let purchaseField = isGoing ? '<td class="p-3"><input type="number" class="border border-gray-300 p-2 w-28 text-center rounded focus:border-blue-500 text-red-600" value="' + (item.purchase_price || '') + '" onchange="updateItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'purchase_price\', this.value)"></td>' : '';
-                    let traderField = '<input type="text" placeholder="اسم التاجر" class="border border-gray-300 p-2 rounded w-full focus:border-blue-500" value="'+(item.trader_name||'')+'" onchange="updateItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'trader_name\', this.value)" ' + disabledAttr + '>';
-                    let invoiceVal = isGoing ? (item.invoice_number || '') : (item.quotation_number || '');
-                    let invoiceFieldType = isGoing ? 'invoice_number' : 'quotation_number';
+                    itemsHtml += `<div class="bg-[#F9F9F9] border border-gray-200 rounded-lg p-4 mb-3 relative">`;
+                    
+                    if (isPending) {
+                        itemsHtml += `<div class="flex items-center gap-3 mb-3">
+                            <input type="text" class="${inputClass} font-bold flex-1" placeholder="اسم القطعة" value="${item.part_name || ''}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'part_name', this.value)">
+                            ${order.items.length > 1 ? `<button onclick="deleteItem('${order.order_id}', '${item.item_id}')" class="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded"><i class="fas fa-trash"></i></button>` : ''}
+                        </div>`;
+                    } else {
+                        itemsHtml += `<div class="font-bold text-gray-800 mb-2">• ${item.part_name || ''} (${item.quality_type || '-'}) | الكمية: ${item.quantity || 1}</div>`;
+                    }
 
-                    itemsHtml += '<tr class="border-b ' + bgClass + '"><td class="p-3 font-bold">' + nameField + '</td><td class="p-3 whitespace-nowrap">' + (item.quality_type || '') + ' | كمية: <span class="font-black bg-gray-200 px-2 rounded">' + (item.quantity || 1) + '</span></td>' + pricingFields + purchaseField + '<td class="p-3 min-w-[140px]">' + traderField + '</td><td class="p-3"><input type="text" class="border border-gray-300 p-2 w-32 rounded text-center focus:border-blue-500 uppercase" placeholder="رقم الفاتورة" value="' + invoiceVal + '" onchange="updateItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'' + invoiceFieldType + '\', this.value)" ' + disabledAttr + '></td></tr>';
+                    if(item.description) itemsHtml += `<div class="text-xs text-gray-500 mb-1">الوصف: ${item.description}</div>`;
+                    if(item.comments) itemsHtml += `<div class="text-xs text-gray-500 mb-3">ملاحظات: ${item.comments}</div>`;
+
+                    if (isPending || isAdminApproval) {
+                        itemsHtml += `<div class="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label class="text-xs font-bold text-gray-600 block mb-1">مبلغ عرض السعر</label>
+                                <input type="number" class="${inputClass}" value="${item.quotation_price || ''}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'quotation_price', this.value)">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-600 block mb-1">سعر البيع</label>
+                                <input type="number" class="${inputClass}" value="${item.selling_price || ''}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'selling_price', this.value)">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label class="text-xs font-bold text-gray-600 block mb-1">اسم التاجر</label>
+                                <input list="traders-list" class="${inputClass}" placeholder="اختر أو اكتب اسم التاجر" value="${item.trader_name || ''}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'trader_name', this.value)">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-600 block mb-1">رقم فاتورة العرض</label>
+                                <input type="text" class="${inputClass}" value="${item.quotation_number || ''}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'quotation_number', this.value)">
+                            </div>
+                        </div>`;
+                        
+                        if(isAdminApproval) {
+                            itemsHtml += `<button onclick="saveQuotationPrice('${item.part_name}', '${item.quotation_number}', ${item.quotation_price || 0}, '${item.trader_name}')" class="w-full bg-[#0D1B6D] text-white text-xs font-bold py-2 rounded hover:bg-blue-900 transition">إضافة عرض السعر للفواتير</button>`;
+                        }
+                    } else if (isGoing) {
+                        itemsHtml += `<div class="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label class="text-xs font-bold text-gray-600 block mb-1">اسم التاجر</label>
+                                <input type="text" readonly class="${inputClass} bg-gray-100" value="${item.trader_name || ''}">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-600 block mb-1">سعر الشراء</label>
+                                <input type="number" class="${inputClass}" value="${item.purchase_price || ''}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'purchase_price', this.value)">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-600 block mb-1">رقم الفاتورة النهائية</label>
+                            <input type="text" class="${inputClass}" value="${item.invoice_number || ''}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'invoice_number', this.value)">
+                        </div>`;
+                    } else {
+                        // قيد الموافقة
+                        itemsHtml += `<div class="flex justify-between items-center bg-white p-2 rounded border border-gray-200 mt-2">
+                            <span class="text-sm font-bold text-[#0D1B6D]">سعر البيع: ${item.selling_price || 0}</span>
+                            <span class="text-sm font-bold text-gray-600">سعر الشراء: ${item.purchase_price || 0}</span>
+                        </div>
+                        <div class="text-xs text-gray-500 mt-2">التاجر: ${item.trader_name || 'غير محدد'} | الفاتورة: ${item.invoice_number || item.quotation_number || 'غير محدد'}</div>`;
+                    }
+                    itemsHtml += `</div>`;
                 });
 
-                let orderHtml = '<div class="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-200 overflow-hidden hover:shadow-md"><div class="p-5 cursor-pointer flex justify-between items-start" onclick="toggleDetails(\'' + order.order_id + '\')"><div class="flex-1"><div class="flex items-center gap-3 mb-3"><span class="text-[#D32F2F] font-black text-lg">طلب رقم: #' + (order.order_number || '') + '</span><span class="px-3 py-1 rounded-full text-xs font-bold border ' + statusColor + '">' + statusText + '</span></div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3 text-sm"><div class="text-[#0D1B6D] font-bold text-[15px] lg:col-span-1">المركبة: ' + (order.vehicle_name || '') + ' - ' + (order.vehicle_model || '') + '</div><div class="text-gray-600"><i class="fas fa-user text-gray-400 ml-1"></i> الهاتف: ' + (order.user_number || '') + '</div><div class="text-gray-600"><i class="fas fa-industry text-gray-400 ml-1"></i> القاعدة (VIN): <span class="uppercase tracking-wide">' + (order.vin_number || '') + '</span></div><div class="text-gray-600"><i class="fas fa-map-marker-alt text-gray-400 ml-1"></i> الموقع: ' + (order.delivery_location || '') + '</div></div></div><div class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border border-gray-200 ml-2"><i id="icon-' + order.order_id + '" class="fas fa-chevron-down text-[#0D1B6D]"></i></div></div>';
-                orderHtml += '<div id="details-' + order.order_id + '" class="order-details p-5 border-t border-gray-200 bg-slate-50/50"><h3 class="font-bold text-blue-600 mb-4 flex items-center gap-2"><i class="fas fa-cogs"></i> القطع والتسعير</h3><div class="overflow-x-auto mb-5 rounded-lg border border-gray-200 shadow-sm"><table class="w-full text-sm text-right border-collapse bg-white min-w-[800px]"><thead class="bg-[#0D1B6D] text-white"><tr><th class="p-3">القطعة</th><th class="p-3">النوع/الكمية</th>' + (isPending || isAdminApproval ? '<th class="p-3">مبلغ العرض</th><th class="p-3">سعر البيع</th>' : '') + (isGoing ? '<th class="p-3">سعر الشراء</th>' : '') + '<th class="p-3">التاجر</th><th class="p-3">رقم الفاتورة</th></tr></thead><tbody>' + itemsHtml + '</tbody></table></div>';
-                
-                if(isPending) orderHtml += '<button class="text-[#4CAF50] font-bold flex items-center gap-2 mb-6 hover:bg-green-50 px-4 py-2 rounded border border-green-200 bg-white" onclick="addNewItem(\'' + order.order_id + '\')"><i class="fas fa-plus"></i> إضافة صنف</button>';
-                
-                if(isPending || isAdminApproval) orderHtml += '<div class="mb-6 w-full md:w-1/4"><label class="block text-sm font-bold text-gray-700 mb-2">رسوم التوصيل:</label><input type="number" class="border border-gray-300 focus:border-[#0D1B6D] p-2.5 rounded w-full font-bold text-lg" value="' + (order.delivery_fees || '') + '" onchange="updateDeliveryFees(\'' + order.order_id + '\', this.value)"></div>';
+                let orderHtml = `<div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden mb-4">
+                    <div class="p-4 cursor-pointer flex justify-between items-start" onclick="toggleDetails('${order.order_id}')">
+                        <div class="flex-1 space-y-1">
+                            <div class="text-[#D32F2F] font-black text-lg">طلب رقم: #${order.order_number || ''}</div>
+                            <div class="text-gray-500 text-xs">تاريخ الطلب: ${orderDate}</div>
+                            <div class="mt-2 text-[#0D1B6D] font-bold text-[15px]">المركبة: ${order.vehicle_name || ''} - ${order.vehicle_model || ''}</div>
+                            <div class="text-gray-700 text-sm">الشركة: ${order.brand_name || ''} | مكان التصنيع: ${order.manufacture || ''}</div>
+                            <div class="text-gray-700 text-sm">رقم القاعدة (VIN): <span class="uppercase">${order.vin_number || 'غير متوفر'}</span></div>
+                            <div class="text-gray-500 text-xs">الموقع: ${order.delivery_location || ''}</div>
+                            
+                            <div class="mt-2 text-[#0D1B6D] font-bold text-sm" id="client-name-${order.order_id}">اسم العميل: جاري الجلب...</div>
+                            <div class="text-gray-500 text-xs">رقم الهاتف: ${order.user_number || 'غير متوفر'}</div>
+                            <div class="text-gray-500 text-xs" id="client-whats-${order.order_id}">رقم الواتساب: جاري الجلب...</div>
+                            
+                            ${isAdminApproval ? `<div class="text-[#E65100] font-bold text-sm mt-1">مستلم الطلب: ${order.order_receiving_by || 'غير محدد'}</div>` : ''}
+                            
+                            <div class="mt-2 font-extrabold text-sm ${statusColor}">الحالة: ${statusText}</div>
+                            <div class="text-gray-500 text-[11px]">تاريخ الحالة: ${statusDate}</div>
+                        </div>
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-50 border border-gray-200">
+                            <i id="icon-${order.order_id}" class="fas fa-chevron-down text-[#0D1B6D]"></i>
+                        </div>
+                    </div>
 
-                let actionsHtml = '';
-                if(isPending) actionsHtml = '<button onclick="processOrder(\'' + order.order_id + '\', \'canceled\')" class="px-6 py-2.5 text-red-600 font-bold hover:bg-red-50 rounded transition">إلغاء الطلب</button><button onclick="processOrder(\'' + order.order_id + '\', \'waiting admin approvel\')" class="px-8 py-2.5 bg-[#0D1B6D] text-white font-bold rounded shadow-md hover:bg-blue-900">اعتماد للإدارة</button>';
-                else if(isAdminApproval) actionsHtml = '<button onclick="processOrder(\'' + order.order_id + '\', \'pending\')" class="px-6 py-2.5 text-[#E65100] font-bold hover:bg-orange-50 rounded transition">إعادة للمراجعة</button><button onclick="processOrder(\'' + order.order_id + '\', \'waiting for approvel\')" class="px-8 py-2.5 bg-[#4CAF50] text-white font-bold rounded shadow-md hover:bg-green-600">اعتماد نهائي</button>';
-                else if(isGoing) actionsHtml = '<button onclick="processOrder(\'' + order.order_id + '\', \'canceled\')" class="px-6 py-2.5 text-red-500 font-bold hover:bg-red-50 border border-red-500 rounded transition">إلغاء (إرجاع)</button><button onclick="processOrder(\'' + order.order_id + '\', \'completed\')" class="px-8 py-2.5 bg-[#4CAF50] text-white font-bold rounded shadow-md hover:bg-green-600">إنهاء بنجاح</button>';
-                
-                orderHtml += '<div class="flex justify-end gap-3 mt-8 border-t border-gray-200 pt-5">' + actionsHtml + '</div></div></div>';
+                    <div id="details-${order.order_id}" class="order-details border-t border-gray-200 bg-white">
+                        <div class="p-4">
+                            <h3 class="font-bold text-[#42A5F5] mb-4">القطع المطلوبة وتسعيرها:</h3>
+                            ${itemsHtml}
+                            
+                            ${isPending ? `<button class="w-full text-[#4CAF50] font-bold py-2 mb-4 hover:bg-green-50 rounded" onclick="addNewSubItem('${order.order_id}')">+ إضافة صنف جديد للفاتورة</button>` : ''}
+                            
+                            ${(isPending || isAdminApproval) ? `
+                                <div class="mb-4">
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">رسوم التوصيل الكلية:</label>
+                                    <input type="number" class="border border-gray-300 focus:border-[#0D1B6D] p-2 rounded w-full font-bold" value="${order.delivery_fees \vert{}\vert{} ''}" onchange="updateOrderField('${order.order_id}', 'delivery_fees', this.value)">
+                                </div>
+                            ` : `
+                                <div class="text-[#0D1B6D] font-bold mt-2 border-b pb-2 mb-2">رسوم التوصيل: ${order.delivery_fees || 0}</div>
+                            `}
+
+                            <div class="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
+                                ${isPending ? `
+                                    <button onclick="processStatus('${order.order_id}', 'canceled')" class="px-5 py-2 text-red-600 font-bold hover:bg-red-50 rounded">إلغاء</button>
+                                    <button onclick="requestAdminApproval('${order.order_id}')" class="px-5 py-2 bg-[#4CAF50] text-white font-bold rounded shadow hover:bg-green-600">طلب اعتماد</button>
+                                ` : isAdminApproval ? `
+                                    <button onclick="processStatus('${order.order_id}', 'pending')" class="px-5 py-2 text-[#E65100] font-bold hover:bg-orange-50 rounded">إعادة المراجعة</button>
+                                    <button onclick="finalApproval('${order.order_id}', ${order.order_number}, '${order.user_id}')" class="px-5 py-2 bg-[#4CAF50] text-white font-bold rounded shadow hover:bg-green-600">اعتماد نهائي</button>
+                                ` : isGoing ? `
+                                    <button onclick="openCancelModal('${order.order_id}', '${order.user_id}',${order.order_number})" class="px-5 py-2 border border-red-500 text-red-500 font-bold rounded hover:bg-red-50">إلغاء الطلب</button>
+                                    <button onclick="finishGoingOrder('${order.order_id}', '${order.user_id}',${order.order_number})" class="px-5 py-2 bg-[#4CAF50] text-white font-bold rounded shadow hover:bg-green-600">إنهاء بنجاح</button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
                 finalHtml += orderHtml;
             });
             container.innerHTML = finalHtml + '</div>';
@@ -163,79 +375,184 @@
             icon.classList.toggle('fa-chevron-down'); icon.classList.toggle('fa-chevron-up');
         }
 
-        function fetchOrders() {
-            renderTabs();
-            document.getElementById('ordersContainer').innerHTML = '<div class="flex justify-center py-20"><i class="fas fa-spinner fa-spin text-4xl text-blue-600"></i></div>';
-            db.collection('orders').onSnapshot((snapshot) => {
-                ordersData = [];
-                if (!snapshot.empty) {
-                    snapshot.forEach(doc => {
-                        let order = doc.data();
-                        order.order_id = doc.id;
-                        order.order_status = (order.order_status || 'pending').toLowerCase().trim();
-                        ordersData.push(order);
-                    });
-                }
-                renderOrders();
-            });
+        // تحديث الحقول في Collection: orders
+        function updateOrderField(orderId, field, value) {
+            let val = field.includes('fees') ? (parseFloat(value) || 0) : value;
+            db.collection('orders').doc(orderId).update({ [field]: val });
         }
 
-        function updateItem(orderId, itemId, field, value) {
-            let order = ordersData.find(o => o.order_id === orderId);
-            if (order && order.items) {
-                let itemIndex = order.items.findIndex(i => i.item_id === itemId);
-                if (itemIndex !== -1) {
-                    let finalValue = (field.includes('price')) ? (parseFloat(value) || 0) : value;
-                    order.items[itemIndex][field] = finalValue;
-                    db.collection('orders').doc(orderId).update({ items: order.items });
-                }
-            }
+        // تحديث العناصر داخل الـ Subcollection
+        function updateSubItem(orderId, itemId, field, value) {
+            let val = field.includes('price') ? (parseFloat(value) || 0) : value;
+            db.collection('orders').doc(orderId).collection('items').doc(itemId).set({
+                [field]: val
+            }, { merge: true });
         }
 
-        function updateDeliveryFees(orderId, value) {
-            db.collection('orders').doc(orderId).update({ delivery_fees: parseFloat(value) || 0 });
-        }
-
-        function addNewItem(orderId) {
+        // إضافة صنف جديد للـ Subcollection
+        function addNewSubItem(orderId) {
             let order = ordersData.find(o => o.order_id === orderId);
             if(order) {
-                let currentItems = order.items || [];
-                currentItems.push({ item_id: "ITEM-" + Date.now(), part_name: "صنف جديد", quality_type: "-", quantity: 1, quotation_price: 0, selling_price: 0, trader_name: "", quotation_number: "", purchase_price: 0, invoice_number: "" });
-                db.collection('orders').doc(orderId).update({ items: currentItems }).then(() => setTimeout(() => { let d = document.getElementById('details-' + orderId); if(d && !d.classList.contains('open')) toggleDetails(orderId); }, 100));
+                let newItemRef = db.collection('orders').doc(orderId).collection('items').doc();
+                let baseItem = order.items && order.items.length > 0 ? order.items[0] : null;
+                
+                let newItem = {
+                    item_id: newItemRef.id,
+                    part_name: "صنف جديد",
+                    quality_type: baseItem ? baseItem.quality_type : "-",
+                    quantity: 1,
+                    quotation_price: 0,
+                    selling_price: 0,
+                    purchase_price: 0,
+                    trader_name: "",
+                    quotation_number: "",
+                    invoice_number: "",
+                    description: "",
+                    comments: ""
+                };
+                
+                newItemRef.set(newItem).then(() => {
+                    let d = document.getElementById('details-' + orderId);
+                    if(d && !d.classList.contains('open')) toggleDetails(orderId);
+                });
             }
         }
 
-        function processOrder(orderId, newStatus) {
-            if (newStatus === 'canceled' && !confirm("هل أنت متأكد من إلغاء الطلب؟")) return;
-            db.collection('orders').doc(orderId).update({ order_status: newStatus });
+        function deleteItem(orderId, itemId) {
+            if(confirm("هل أنت متأكد من حذف هذا الصنف؟")) {
+                db.collection('orders').doc(orderId).collection('items').doc(itemId).delete();
+            }
         }
 
-        function requestNotificationPermission() {
-            Notification.requestPermission().then((permission) => {
-                if (permission === 'granted') {
-                    messaging.getToken({ vapidKey: 'BPncXmrgoDlb__z2uDh6POxoQ2WkmvdCMm5PFp58sJc_ZfRo3pHhm_cf2S_u4_D4gDj-JKH-WCHHslqmVrje72A' }).then(token => {
-                        if (token) console.log("FCM:", token);
-                    });
-                }
+        // حفظ التسعيرة (كما في الأندرويد saveQuotationPrice)
+        function saveQuotationPrice(partName, quotationNumber, quotationPrice, traderName) {
+            if(!quotationPrice || !traderName || !quotationNumber) {
+                alert("الرجاء تعبئة مبلغ العرض واسم التاجر ورقم الفاتورة");
+                return;
+            }
+            let ref = db.collection("quotation_prices").doc();
+            ref.set({
+                quotation_id: ref.id,
+                part_name: partName,
+                quotation_number: quotationNumber,
+                quotation_price: parseFloat(quotationPrice),
+                trader_name: traderName,
+                created_at: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => alert("تمت إضافة عرض السعر بنجاح"));
+        }
+
+        // تغيير الحالات العامة
+        function processStatus(orderId, newStatus) {
+            if (newStatus === 'canceled' && !confirm("هل أنت متأكد من إلغاء الفاتورة؟")) return;
+            db.collection('orders').doc(orderId).update({ 
+                order_status: newStatus,
+                order_status_date: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            if(newStatus === 'canceled') removeAdminAlarm(orderId);
+        }
+
+        // طلب الاعتماد (يسجل اسم الموظف)
+        function requestAdminApproval(orderId) {
+            let order = ordersData.find(o => o.order_id === orderId);
+            if(order && order.items && order.items.some(i => !i.trader_name)) {
+                alert("الرجاء اختيار اسم التاجر لجميع الأصناف"); return;
+            }
+            db.collection('orders').doc(orderId).update({ 
+                order_status: 'waiting admin approvel',
+                order_status_date: firebase.firestore.FieldValue.serverTimestamp(),
+                order_receiving_by: adminUsername
             });
         }
 
-        messaging.onMessage((payload) => {
-            const title = payload.data?.title || payload.notification?.title || "إشعار جديد";
-            const message = payload.data?.message || payload.notification?.body || "";
-            showFCMToast(title, message);
-        });
+        // الاعتماد النهائي للعميل
+        async function finalApproval(orderId, orderNumber, userId) {
+            let order = ordersData.find(o => o.order_id === orderId);
+            if(order && order.items && order.items.some(i => !i.trader_name)) {
+                alert("الرجاء اختيار اسم التاجر لجميع الأصناف"); return;
+            }
+            await db.collection('orders').doc(orderId).update({ 
+                order_status: 'waiting for approvel',
+                order_status_date: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            removeAdminAlarm(orderNumber);
+            sendUserAlarm(userId, orderNumber, "فاتورة جاهزة", `تم تسعير طلبك رقم ${orderNumber}، يرجى مراجعته.`);
+        }
 
-        function showFCMToast(title, message) {
-            let container = document.getElementById('fcm-toast-container');
-            if (!container) { container = document.createElement('div'); container.id = 'fcm-toast-container'; container.className = 'fixed top-4 left-4 z-50 flex flex-col gap-3'; document.body.appendChild(container); }
-            const toast = document.createElement('div');
-            toast.className = 'bg-[#0D1B6D] text-white px-5 py-4 rounded-xl shadow-2xl transform transition-all duration-500 translate-y-[-100%] opacity-0 flex items-start gap-4 w-80 cursor-pointer border border-blue-800';
-            toast.onclick = () => { currentTab = 'pending'; fetchOrders(); toast.remove(); };
-            toast.innerHTML = `<div class="bg-blue-500/20 p-3 rounded-full shrink-0"><i class="fas fa-bell text-blue-300 text-xl animate-pulse"></i></div><div class="flex-1"><h4 class="font-bold text-sm mb-1 text-blue-100">${title}</h4><p class="text-xs text-gray-300 leading-relaxed">${message}</p></div><button class="shrink-0 text-gray-400 hover:text-white" onclick="event.stopPropagation(); this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
-            container.appendChild(toast);
-            setTimeout(() => toast.classList.remove('translate-y-[-100%]', 'opacity-0'), 100);
-            setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-[-100%]'); setTimeout(() => toast.remove(), 500); }, 6000);
+        // إنهاء بنجاح لمرحلة جاري التوصيل
+        async function finishGoingOrder(orderId, userId, orderNumber) {
+            await db.collection('orders').doc(orderId).update({ 
+                order_status: 'completed',
+                order_status_date: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            removeAdminAlarm(orderNumber);
+            sendUserAlarm(userId, orderNumber, "تم التوصيل", `تم توصيل طلبك رقم ${orderNumber} بنجاح.`);
+        }
+
+        // نوافذ الإلغاء لمرحلة التوصيل
+        function openCancelModal(orderId, userId, orderNumber) {
+            document.getElementById('cancelOrderId').value = orderId;
+            document.getElementById('cancelOrderUserId').value = userId;
+            document.getElementById('cancelOrderNumber').value = orderNumber;
+            document.getElementById('cancelNotes').value = "";
+            document.getElementById('incrementRejection').checked = false;
+            document.getElementById('cancelModal').classList.remove('hidden');
+        }
+
+        function closeCancelModal() {
+            document.getElementById('cancelModal').classList.add('hidden');
+        }
+
+        async function confirmCancelGoingOrder() {
+            let orderId = document.getElementById('cancelOrderId').value;
+            let userId = document.getElementById('cancelOrderUserId').value;
+            let orderNumber = document.getElementById('cancelOrderNumber').value;
+            let notes = document.getElementById('cancelNotes').value;
+            let incReject = document.getElementById('incrementRejection').checked;
+
+            if(!notes.trim()) { alert("الرجاء كتابة سبب الإلغاء"); return; }
+
+            await db.collection('orders').doc(orderId).update({
+                order_status: 'canceled',
+                order_status_date: firebase.firestore.FieldValue.serverTimestamp(),
+                approval_notes: notes
+            });
+
+            if(incReject && userId) {
+                await db.collection('users').doc(userId).update({
+                    number_of_rejections: firebase.firestore.FieldValue.increment(1)
+                });
+            }
+
+            removeAdminAlarm(orderNumber);
+            sendUserAlarm(userId, orderNumber, "تم إلغاء الطلب", `تم إلغاء طلبك رقم ${orderNumber} من قبل الإدارة.`);
+            closeCancelModal();
+        }
+
+        // دوال مساعدة للإشعارات (Alarms)
+        async function removeAdminAlarm(orderNumber) {
+            try {
+                let snap = await db.collection('admin_alarm').where('order_number', '==', parseInt(orderNumber)).get();
+                snap.forEach(doc => doc.ref.delete());
+            } catch(e){}
+        }
+
+        async function sendUserAlarm(userId, orderNumber, title, message) {
+            if(!userId) return;
+            let userDoc = await db.collection('users').doc(userId).get();
+            let token = userDoc.exists ? userDoc.data().fcm_token : "";
+            
+            let ref = db.collection('user_alarm').doc();
+            ref.set({
+                alarm_id: ref.id,
+                date: firebase.firestore.FieldValue.serverTimestamp(),
+                order_number: parseInt(orderNumber),
+                title: title,
+                message: message,
+                receiver_id: userId,
+                fcm_token: token || "",
+                isRead: false,
+                type: "order"
+            });
         }
     </script>
 </body>
