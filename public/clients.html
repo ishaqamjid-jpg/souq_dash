@@ -56,7 +56,7 @@
         <button onclick="openAddModal()" class="fab-button w-14 h-14 bg-[#0D1B6D] hover:bg-blue-900 text-white rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105"><i class="fas fa-plus text-xl"></i></button>
     </div>
 
-    <!-- نافذة الإضافة والتعديل -->
+    <!-- نافذة الإضافة -->
     <div id="add-modal" class="fixed inset-0 modal-overlay z-50 hidden-element flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto flex flex-col">
             <div class="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white z-10">
@@ -94,28 +94,39 @@
             <h3 class="text-xl font-bold mb-2">تأكيد الحذف</h3>
             <p class="text-gray-500 mb-6" id="delete-message">هل أنت متأكد من حذف العميل؟</p>
             <div class="flex gap-3 justify-center">
-                <button onclick="closeModal('delete-modal')" class="flex-1 px-4 py-2 bg-gray-100 rounded-lg font-bold">إلغاء</button>
-                <button id="confirm-delete-btn" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-bold">حذف</button>
+                <button onclick="closeModal('delete-modal')" class="flex-1 px-4 py-2 bg-gray-100 rounded-lg font-bold hover:bg-gray-200 transition-colors">إلغاء</button>
+                <!-- تمت إضافة دالة الحذف هنا -->
+                <button id="confirm-delete-btn" onclick="executeDelete()" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors">حذف</button>
             </div>
         </div>
     </div>
     
-    <div id="toast-message" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-[#4CAF50] text-white px-6 py-3 rounded-xl shadow-lg hidden-element transition-opacity z-50 flex items-center gap-3"><i class="fas fa-check-circle text-xl"></i> <span id="toast-text" class="font-bold"></span></div>
+    <div id="toast-message" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-[#4CAF50] text-white px-6 py-3 rounded-xl shadow-lg hidden-element transition-opacity z-50 flex items-center gap-3">
+        <i id="toast-icon" class="fas fa-check-circle text-xl"></i> 
+        <span id="toast-text" class="font-bold"></span>
+    </div>
 
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> <!-- السطر المضاف -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> 
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
     <script>
-        const firebaseConfig = { apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg", authDomain: "souqalghiyar.firebaseapp.com", projectId: "souqalghiyar", storageBucket: "souqalghiyar.firebasestorage.app", messagingSenderId: "186585426069", appId: "1:186585426069:web:9f34cedeee498d1bd3539c" };
+        const firebaseConfig = { 
+            apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg", 
+            authDomain: "souqalghiyar.firebaseapp.com", 
+            projectId: "souqalghiyar", 
+            storageBucket: "souqalghiyar.firebasestorage.app", 
+            messagingSenderId: "186585426069", 
+            appId: "1:186585426069:web:9f34cedeee498d1bd3539c" 
+        };
+        
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         let clientsData = [];
         let clientToDeleteId = null;
 
-        // التحقق من المصادقة قبل الفتح
         window.onload = function() {
             firebase.auth().onAuthStateChanged(function(user) {
                 if (user) {
@@ -135,6 +146,9 @@
                     clientsData.push(data);
                 });
                 renderClients();
+            }, (error) => {
+                console.error("Error fetching clients:", error);
+                showToast("حدث خطأ في جلب بيانات العملاء", false);
             });
         }
 
@@ -221,18 +235,30 @@
             if(!display_name || !phone_number) return showToast("يرجى إدخال اسم العميل ورقم الهاتف", false);
 
             db.collection('clients').add({
-                display_name, phone_number, type,
+                display_name, 
+                phone_number, 
+                type,
                 trade_name: type === 'تجاري' ? document.getElementById('add-trade-name').value : "",
                 trade_number: type === 'تجاري' ? document.getElementById('add-trade-number').value : "",
                 location: document.getElementById('add-location').value,
                 status: document.getElementById('add-status').value,
-                number_of_rejections: 0, banned_status: false, fcm_token: "", commercial_document_image: "",
-                created_at: new Date().toISOString().split('T')[0]
-            }).then(() => { closeModal('add-modal'); showToast("تمت الإضافة بنجاح"); });
+                number_of_rejections: 0, 
+                banned_status: false, 
+                fcm_token: "", 
+                commercial_document_image: "",
+                created_at: firebase.firestore.FieldValue.serverTimestamp() // استخدام طابع زمني دقيق
+            }).then(() => { 
+                closeModal('add-modal'); 
+                showToast("تمت الإضافة بنجاح"); 
+            }).catch((error) => {
+                console.error("Add error:", error);
+                showToast("حدث خطأ أثناء الإضافة", false);
+            });
         }
 
         function updateClient(id) {
             let type = document.querySelector('input[name="type-' + id + '"]:checked').value;
+            
             db.collection('clients').doc(id).update({
                 type,
                 display_name: document.getElementById('edit-name-' + id).value,
@@ -243,14 +269,30 @@
                 status: document.getElementById('edit-status-' + id).value,
                 number_of_rejections: parseInt(document.getElementById('edit-rej-' + id).value) || 0,
                 banned_status: document.getElementById('edit-ban-' + id).checked,
-                fcm_token: document.getElementById('edit-token-' + id).value
-            }).then(() => { toggleDetails(id); showToast("تم التحديث بنجاح"); });
+                fcm_token: document.getElementById('edit-token-' + id).value,
+                updated_at: firebase.firestore.FieldValue.serverTimestamp() // إضافة طابع التحديث
+            }).then(() => { 
+                toggleDetails(id); 
+                showToast("تم التحديث بنجاح"); 
+            }).catch((error) => {
+                console.error("Update error:", error);
+                showToast("حدث خطأ أثناء التحديث", false);
+            });
         }
 
         function toggleClientStatus(id) {
             let client = clientsData.find(c => c.user_id === id);
             let newStatus = client.status === 'active' ? 'not_active' : 'active';
-            db.collection('clients').doc(id).update({ status: newStatus }).then(() => showToast("تم تغيير حالة الحساب"));
+            
+            db.collection('clients').doc(id).update({ 
+                status: newStatus,
+                updated_at: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                showToast("تم تغيير حالة الحساب");
+            }).catch((error) => {
+                console.error("Status update error:", error);
+                showToast("حدث خطأ أثناء تغيير الحالة", false);
+            });
         }
 
         function openDeleteModal(id, name) {
@@ -260,13 +302,32 @@
         }
 
         function executeDelete() {
-            db.collection('clients').doc(clientToDeleteId).delete().then(() => { closeModal('delete-modal'); showToast("تم الحذف بنجاح"); });
+            if (!clientToDeleteId) return;
+            
+            db.collection('clients').doc(clientToDeleteId).delete().then(() => { 
+                closeModal('delete-modal'); 
+                showToast("تم الحذف بنجاح"); 
+                clientToDeleteId = null;
+            }).catch((error) => {
+                console.error("Delete error:", error);
+                showToast("حدث خطأ أثناء الحذف", false);
+            });
         }
 
         function showToast(msg, isSuccess = true) {
             let toast = document.getElementById('toast-message');
+            let icon = document.getElementById('toast-icon');
+            
             document.getElementById('toast-text').innerText = msg;
-            toast.className = isSuccess ? "fixed top-4 left-1/2 transform -translate-x-1/2 bg-[#4CAF50] text-white px-6 py-3 rounded-xl shadow-lg transition-opacity z-50 flex items-center gap-3" : "fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-xl shadow-lg transition-opacity z-50 flex items-center gap-3";
+            
+            if(isSuccess) {
+                toast.className = "fixed top-4 left-1/2 transform -translate-x-1/2 bg-[#4CAF50] text-white px-6 py-3 rounded-xl shadow-lg transition-opacity z-50 flex items-center gap-3";
+                icon.className = "fas fa-check-circle text-xl";
+            } else {
+                toast.className = "fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-xl shadow-lg transition-opacity z-50 flex items-center gap-3";
+                icon.className = "fas fa-times-circle text-xl";
+            }
+            
             toast.classList.remove('hidden-element');
             setTimeout(() => toast.classList.add('hidden-element'), 3000);
         }
