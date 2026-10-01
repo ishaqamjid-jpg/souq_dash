@@ -50,7 +50,9 @@
         </header>
 
         <main class="flex-1 overflow-y-auto bg-gray-50 flex flex-col relative">
-            <div class="flex bg-[#0D1B6D] text-gray-300 px-4 overflow-x-auto border-b-4 border-[#0D1B6D] sticky top-0 z-10 shadow-md" id="tabsContainer"></div>
+            <!-- شريط التابات -->
+            <div class="flex bg-[#0D1B6D] text-gray-300 px-4 overflow-x-auto border-b-4 border-[#0D1B6D] sticky top-0 z-10 shadow-md min-h-[50px]" id="tabsContainer"></div>
+            <!-- حاوية الطلبات -->
             <div class="p-6 max-w-7xl w-full mx-auto" id="ordersContainer"></div>
         </main>
     </div>
@@ -107,24 +109,30 @@
         let ordersData = [];
         let clientsData = {};
         let adminUsername = "مدير النظام";
-        
-        // حفظ حالة الطلبات المفتوحة لتجنب إغلاقها عند التحديث
         let openOrders = new Set();
 
-        window.onload = function() {
+        // التعديل الأهم: العمل فوراً بمجرد جاهزية الشاشة بدلاً من انتظار الملفات الخارجية
+        document.addEventListener("DOMContentLoaded", function() {
+            // رسم التابات فوراً لمنع الشاشة البيضاء
+            renderTabs();
+            document.getElementById('ordersContainer').innerHTML = '<div class="flex flex-col items-center justify-center py-20"><i class="fas fa-spinner fa-spin text-4xl text-[#0D1B6D] mb-4"></i><span class="font-bold text-gray-600">جاري التحقق من الصلاحيات...</span></div>';
+
             firebase.auth().onAuthStateChanged(function(user) {
                 if (user) {
                     adminUsername = user.displayName || (user.email ? user.email.split('@')[0] : "مدير النظام");
-                    document.getElementById('adminNameDisplay').innerText = `أهلاً، ${adminUsername}`;
+                    let nameDisplay = document.getElementById('adminNameDisplay');
+                    if(nameDisplay) nameDisplay.innerText = `أهلاً، ${adminUsername}`;
+                    
+                    fetchTradersList();
+                    fetchOrders();
                 } else {
-                    console.warn("جاري فحص النظام بدون تسجيل دخول. قد تواجه مشاكل في الصلاحيات.");
+                    // إذا لم يكن مسجل دخول، قم بطرده لتسجيل الدخول لحماية البيانات
+                    window.location.href = "index.html"; 
                 }
-                fetchTradersList();
-                fetchOrders();
             });
-        };
+        });
 
-        // دالة هامة جداً لحماية الكود من الانهيار إذا كان الاسم يحتوي على رموز أو علامات تنصيص
+        // حماية النصوص من كسر واجهة HTML (مهم جداً للأسماء التي تحتوي علامات تنصيص)
         function escapeHtml(unsafe) {
             if (unsafe === null || unsafe === undefined) return '';
             return (unsafe + '').replace(/[&<"'>]/g, function (m) {
@@ -187,6 +195,7 @@
 
         function renderTabs() {
             const tabsContainer = document.getElementById('tabsContainer');
+            if(!tabsContainer) return;
             tabsContainer.innerHTML = '';
             tabs.forEach(tab => {
                 let isActive = tab.id === currentTab;
@@ -200,50 +209,53 @@
         }
 
         function fetchOrders() {
-            renderTabs();
-            if(ordersData.length === 0) {
-                document.getElementById('ordersContainer').innerHTML = '<div class="flex justify-center py-20"><i class="fas fa-spinner fa-spin text-4xl text-[#0D1B6D]"></i></div>';
-            }
+            document.getElementById('ordersContainer').innerHTML = '<div class="flex flex-col items-center justify-center py-20"><i class="fas fa-spinner fa-spin text-4xl text-[#0D1B6D] mb-4"></i><span class="font-bold text-gray-600">جاري جلب الطلبات...</span></div>';
             
             db.collection('orders').onSnapshot(async (snapshot) => {
-                let tempOrders = [];
-                
-                let fetchPromises = snapshot.docs.map(async (doc) => {
-                    let order = doc.data();
-                    order.order_id = doc.id;
-                    order.order_status = (order.order_status || 'pending').toLowerCase().trim();
+                try {
+                    let tempOrders = [];
                     
-                    try {
-                        let itemsSnap = await db.collection('orders').doc(order.order_id).collection('items').get();
-                        if (!itemsSnap.empty) {
-                            order.items = itemsSnap.docs.map(iDoc => {
-                                let itemData = iDoc.data();
-                                itemData.item_id = iDoc.id; 
-                                return itemData;
-                            });
-                        } else {
-                            // نظام الفولباك (Fallback) للطلبات القديمة المحفوظة في المصفوفة الأساسية
+                    let fetchPromises = snapshot.docs.map(async (doc) => {
+                        let order = doc.data();
+                        order.order_id = doc.id;
+                        order.order_status = (order.order_status || 'pending').toLowerCase().trim();
+                        
+                        try {
+                            let itemsSnap = await db.collection('orders').doc(order.order_id).collection('items').get();
+                            if (!itemsSnap.empty) {
+                                order.items = itemsSnap.docs.map(iDoc => {
+                                    let itemData = iDoc.data();
+                                    itemData.item_id = iDoc.id; 
+                                    return itemData;
+                                });
+                            } else {
+                                let legacyItems = Array.isArray(order.items) ? order.items : [];
+                                order.items = legacyItems.map((it, idx) => {
+                                    if (!it.item_id) it.item_id = "LEGACY-" + idx;
+                                    return it;
+                                });
+                            }
+                        } catch(e) {
                             let legacyItems = Array.isArray(order.items) ? order.items : [];
                             order.items = legacyItems.map((it, idx) => {
                                 if (!it.item_id) it.item_id = "LEGACY-" + idx;
                                 return it;
                             });
                         }
-                    } catch(e) {
-                        let legacyItems = Array.isArray(order.items) ? order.items : [];
-                        order.items = legacyItems.map((it, idx) => {
-                            if (!it.item_id) it.item_id = "LEGACY-" + idx;
-                            return it;
-                        });
-                    }
-                    
-                    tempOrders.push(order);
-                    fetchClientInfo(order.user_id, order.order_id);
-                });
+                        
+                        tempOrders.push(order);
+                        fetchClientInfo(order.user_id, order.order_id);
+                    });
 
-                await Promise.all(fetchPromises);
-                ordersData = tempOrders.sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
-                renderOrders();
+                    await Promise.all(fetchPromises);
+                    ordersData = tempOrders.sort((a, b) => (b.created_at?.seconds || 0) - (a.created_at?.seconds || 0));
+                    renderOrders();
+                } catch (e) {
+                    console.error("Error inside onSnapshot", e);
+                }
+            }, (error) => {
+                // إظهار رسالة واضحة في حال كانت هناك مشكلة في الصلاحيات
+                document.getElementById('ordersContainer').innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-center"><i class="fas fa-exclamation-triangle text-red-500 text-6xl mb-4"></i><div class="text-xl font-bold text-red-600">حدث خطأ في الاتصال بقاعدة البيانات</div><div class="text-gray-500 font-bold mt-2">${error.message}</div></div>`;
             });
         }
 
@@ -270,7 +282,6 @@
 
                 let itemsHtml = '';
                 
-                // التأكد من أن items مصفوفة صالحة
                 let safeItems = Array.isArray(order.items) ? order.items : [];
                 
                 safeItems.forEach(item => {
@@ -278,7 +289,6 @@
                     
                     let inputClass = "border border-gray-300 p-2 rounded focus:outline-none focus:border-[#0D1B6D] w-full text-sm font-medium";
                     
-                    // تأمين كافة المتغيرات قبل طباعتها بالـ HTML
                     let safePartName = escapeHtml(item.part_name);
                     let safeQuality = escapeHtml(item.quality_type);
                     let safeTraderName = escapeHtml(item.trader_name);
@@ -320,7 +330,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                             <div>
                                 <label class="text-xs font-bold text-gray-600 block mb-1">اسم التاجر</label>
-                                <input list="traders-list" class="${inputClass}" placeholder="اختر أو اكتب اسم التاجر" value="${safeTraderName}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'trader_name', this.value)">
+                                <input list="traders-list" class="${inputClass}" placeholder="اختر اسم التاجر" value="${safeTraderName}" onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'trader_name', this.value)">
                             </div>
                             <div>
                                 <label class="text-xs font-bold text-gray-600 block mb-1">رقم فاتورة العرض</label>
@@ -356,7 +366,6 @@
                     itemsHtml += `</div>`;
                 });
 
-                // المحافظة على حالة النافذة (مفتوحة أم مغلقة)
                 let isOpen = openOrders.has(order.order_id);
                 let detailsState = isOpen ? 'open' : '';
                 let iconState = isOpen ? 'fa-chevron-up' : 'fa-chevron-down';
@@ -421,7 +430,6 @@
             container.innerHTML = finalHtml + '</div>';
         }
 
-        // دالة الفتح والإغلاق التي تقوم أيضاً بتحديث المتغير openOrders
         function toggleDetails(orderId) {
             const detailsDiv = document.getElementById('details-' + orderId);
             const icon = document.getElementById('icon-' + orderId);
@@ -439,7 +447,7 @@
 
         function updateOrderField(orderId, field, value) {
             let val = field.includes('fees') ? (parseFloat(value) || 0) : value;
-            db.collection('orders').doc(orderId).update({ [field]: val });
+            db.collection('orders').doc(orderId).update({ [field]: val }).catch(()=>{});
         }
 
         function updateSubItem(orderId, itemId, field, value) {
@@ -484,14 +492,14 @@
                     comments: ""
                 };
                 
-                openOrders.add(orderId); // المحافظة على النافذة مفتوحة
+                openOrders.add(orderId);
                 
                 if (order.items) {
                     order.items.push(newItem);
-                    db.collection('orders').doc(orderId).update({ items: order.items });
+                    db.collection('orders').doc(orderId).update({ items: order.items }).catch(()=>{});
                 }
                 
-                newItemRef.set(newItem);
+                newItemRef.set(newItem).catch(()=>{});
             }
         }
 
@@ -502,11 +510,11 @@
                 
                 if (order && order.items) {
                     order.items = order.items.filter(i => i.item_id !== itemId);
-                    db.collection('orders').doc(orderId).update({ items: order.items });
+                    db.collection('orders').doc(orderId).update({ items: order.items }).catch(()=>{});
                 }
                 
                 if (itemId && !itemId.startsWith("LEGACY-")) {
-                    db.collection('orders').doc(orderId).collection('items').doc(itemId).delete();
+                    db.collection('orders').doc(orderId).collection('items').doc(itemId).delete().catch(()=>{});
                 }
             }
         }
