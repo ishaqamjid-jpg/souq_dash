@@ -128,7 +128,7 @@
             <p class="text-gray-500 mb-6">هل أنت متأكد من رغبتك في حذف هذا الإعلان نهائياً؟</p>
             <div class="flex gap-3 justify-center">
                 <button onclick="closeModal('delete-modal')" class="flex-1 px-4 py-2 text-gray-600 font-bold bg-gray-100 rounded-lg">إلغاء</button>
-                <button id="confirm-delete-btn" class="flex-1 px-4 py-2 bg-red-600 text-white font-bold rounded-lg">حذف</button>
+                <button id="confirm-delete-btn" onclick="executeDelete()" class="flex-1 px-4 py-2 bg-red-600 text-white font-bold rounded-lg">حذف</button>
             </div>
         </div>
     </div>
@@ -139,7 +139,7 @@
 
     <!-- Firebase + Auth -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> <!-- السطر المضاف -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     
     <script>
@@ -151,7 +151,54 @@
         let commercialAds = [], publicAds = [];
         let itemToDelete = { type: '', id: '' };
 
-        // التعديل هنا: جلب البيانات فقط بعد التأكد من تسجيل الدخول
+        // ======== دوال معالجة التواريخ لـ Firestore ======= //
+        
+        // 1. تنسيق التاريخ ليظهر في الجدول بشكل أنيق ومقروء
+        function formatDateForDisplay(val) {
+            if (!val) return 'غير محدد';
+            let d;
+            if (val.toDate) { d = val.toDate(); } // إذا كانت القيمة Timestamp من فايربيز
+            else if (val instanceof Date) { d = val; }
+            else if (typeof val === 'string') {
+                // تنظيف النص في حال تم حفظه كسلسلة نصية
+                let cleanStr = val.replace(' at ', ' ').replace(/UTC\S*/, '').replace(/GMT\S*/, '').trim();
+                d = new Date(cleanStr);
+                if (isNaN(d.getTime())) d = new Date(val); // محاولة أخيرة
+            }
+            if (d && !isNaN(d.getTime())) {
+                return d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
+            return val;
+        }
+
+        // 2. تنسيق التاريخ ليتوافق مع input type="datetime-local" عند فتح نافذة التعديل
+        function formatDateForInput(val) {
+            if (!val) return '';
+            let d;
+            if (val.toDate) { d = val.toDate(); }
+            else if (val instanceof Date) { d = val; }
+            else if (typeof val === 'string') {
+                let cleanStr = val.replace(' at ', ' ').replace(/UTC\S*/, '').replace(/GMT\S*/, '').trim();
+                d = new Date(cleanStr);
+                if (isNaN(d.getTime())) d = new Date(val);
+            }
+            if (d && !isNaN(d.getTime())) {
+                let pad = (n) => n < 10 ? '0' + n : n;
+                // إرجاع الصيغة المطابقة: YYYY-MM-DDThh:mm
+                return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+            }
+            return '';
+        }
+
+        // 3. تحويل النص القادم من الحقل إلى كائن Date ليتم حفظه كـ Timestamp في فايربيز
+        function parseDateForFirestore(val) {
+            if (!val) return null;
+            let d = new Date(val);
+            return isNaN(d.getTime()) ? null : d; 
+        }
+        
+        // =================================================== //
+
         window.onload = function() {
             firebase.auth().onAuthStateChanged(function(user) {
                 if (user) {
@@ -162,23 +209,23 @@
             });
         };
 
-   function fetchAds() {
-    // 1. دریافت تبلیغات تجاری (نام کالکشن با دیتابیس شما هماهنگ شود)
-    db.collection('advertisements').onSnapshot(snap => {
-        commercialAds = snap.docs.map(doc => ({ ad_id: doc.id, ...doc.data() }));
-        if (currentTab === 'commercial') renderAds();
-    }, error => {
-        console.error("خطا در دریافت تبلیغات تجاری:", error);
-    });
+        function fetchAds() {
+            // انتبه: لديك تعارض في اسم الـ collection (هنا 'advertisements' بينما عند الحفظ تستخدم 'commercial_ads')
+            // تركتها كما هي في الكود الخاص بك، لكن يُفضل توحيد الاسم إن كان خطأً.
+            db.collection('advertisements').onSnapshot(snap => {
+                commercialAds = snap.docs.map(doc => ({ ad_id: doc.id, ...doc.data() }));
+                if (currentTab === 'commercial') renderAds();
+            }, error => {
+                console.error("خطا در دریافت تبلیغات تجاری:", error);
+            });
 
-    // 2. دریافت اعلانات عمومی
-    db.collection('public_advertisements').onSnapshot(snap => {
-        publicAds = snap.docs.map(doc => ({ doc_id: doc.id, ...doc.data() }));
-        if (currentTab === 'public') renderAds();
-    }, error => {
-        console.error("خطا در دریافت اعلانات عمومی:", error);
-    });
-}
+            db.collection('public_advertisements').onSnapshot(snap => {
+                publicAds = snap.docs.map(doc => ({ doc_id: doc.id, ...doc.data() }));
+                if (currentTab === 'public') renderAds();
+            }, error => {
+                console.error("خطا در دریافت اعلانات عمومی:", error);
+            });
+        }
 
         function switchTab(tab) {
             currentTab = tab;
@@ -208,7 +255,10 @@
                     htmlStr += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">' + imgHtml;
                     htmlStr += '<div class="p-5"><div class="flex justify-between items-start mb-3"><div><h3 class="text-lg font-bold text-[#0D1B6D]">اسم الإعلان: ' + nameStr + '</h3><p class="text-gray-600 font-semibold">' + (ad.title || '') + '</p></div>';
                     htmlStr += '<div class="flex gap-2"><button onclick="openEditCommercial(\'' + ad.ad_id + '\')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100"><i class="fas fa-pen text-sm"></i></button><button onclick="openDeleteModal(\'commercial\', \'' + ad.ad_id + '\')" class="w-8 h-8 rounded-full bg-red-50 text-red-600 hover:bg-red-100"><i class="fas fa-trash text-sm"></i></button></div></div>';
-                    htmlStr += '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4"><div><span class="text-gray-500 block text-xs">يبدأ</span><span class="text-green-700 font-bold" dir="ltr">' + (ad.start_date || '') + '</span></div><div><span class="text-gray-500 block text-xs">ينتهي</span><span class="text-red-600 font-bold" dir="ltr">' + (ad.end_date || '') + '</span></div><div><span class="text-gray-500 block text-xs">الأولوية</span><span class="font-bold">' + (ad.priority || 0) + '</span></div><div><span class="text-gray-500 block text-xs">الرابط</span><span class="text-blue-500 truncate block" dir="ltr">' + (ad.target_url || 'لا يوجد') + '</span></div></div>';
+                    
+                    // استخدام دالة العرض لتنسيق التواريخ
+                    htmlStr += '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4"><div><span class="text-gray-500 block text-xs">يبدأ</span><span class="text-green-700 font-bold" dir="ltr">' + formatDateForDisplay(ad.start_date) + '</span></div><div><span class="text-gray-500 block text-xs">ينتهي</span><span class="text-red-600 font-bold" dir="ltr">' + formatDateForDisplay(ad.end_date) + '</span></div><div><span class="text-gray-500 block text-xs">الأولوية</span><span class="font-bold">' + (ad.priority || 0) + '</span></div><div><span class="text-gray-500 block text-xs">الرابط</span><span class="text-blue-500 truncate block" dir="ltr">' + (ad.target_url || 'لا يوجد') + '</span></div></div>';
+                    
                     htmlStr += '<div class="flex justify-between items-center pt-4 border-t border-gray-100"><div class="flex items-center gap-3"><span class="font-bold text-gray-700">تفعيل:</span><input type="checkbox" ' + (ad.is_active ? 'checked' : '') + ' onchange="toggleStatus(\'' + ad.ad_id + '\', ' + ad.is_active + ')" class="w-5 h-5 text-green-600 cursor-pointer"></div><span class="px-3 py-1 rounded font-bold text-xs ' + activeColor + '">' + activeText + '</span></div></div></div>';
                 });
             } else {
@@ -218,7 +268,10 @@
                     count++;
                     let catText = pub.category === 'all' ? 'للجميع' : 'لمستخدم محدد (' + pub.phone_number + ')';
                     htmlStr += '<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden p-5"><div class="flex justify-between items-start"><div class="flex-1"><h3 class="text-lg font-bold text-[#0D1B6D] mb-2">' + titleStr + '</h3><p class="text-gray-700 mb-4">' + (pub.message || '') + '</p>';
-                    htmlStr += '<div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm"><div><i class="fas fa-bullseye text-blue-400 ml-1"></i> الفئة: <span class="font-bold">' + catText + '</span></div><div><i class="fas fa-calendar-plus text-gray-400 ml-1"></i> الإنشاء: <span class="font-bold" dir="ltr">' + (pub.create_date || '') + '</span></div><div><i class="fas fa-calendar-times text-red-400 ml-1"></i> الانتهاء: <span class="text-red-600 font-bold" dir="ltr">' + (pub.end_date || 'دائم') + '</span></div></div></div>';
+                    
+                    // استخدام دالة العرض لتنسيق التواريخ
+                    htmlStr += '<div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm"><div><i class="fas fa-bullseye text-blue-400 ml-1"></i> الفئة: <span class="font-bold">' + catText + '</span></div><div><i class="fas fa-calendar-plus text-gray-400 ml-1"></i> الإنشاء: <span class="font-bold" dir="ltr">' + formatDateForDisplay(pub.create_date) + '</span></div><div><i class="fas fa-calendar-times text-red-400 ml-1"></i> الانتهاء: <span class="text-red-600 font-bold" dir="ltr">' + formatDateForDisplay(pub.end_date) + '</span></div></div></div>';
+                    
                     htmlStr += '<button onclick="openDeleteModal(\'public\', \'' + pub.doc_id + '\')" class="w-10 h-10 rounded-full bg-red-50 text-red-600"><i class="fas fa-trash"></i></button></div></div>';
                 });
             }
@@ -255,7 +308,11 @@
             document.getElementById('commercial-modal-title').innerText = "تعديل الإعلان";
             document.getElementById('comm-id').value = ad.ad_id; document.getElementById('comm-name').value = ad.name;
             document.getElementById('comm-title').value = ad.title; document.getElementById('comm-image').value = ad.image_url || "";
-            document.getElementById('comm-start').value = ad.start_date; document.getElementById('comm-end').value = ad.end_date;
+            
+            // استخدام دالة المعالجة لكي يظهر التاريخ بشكل صحيح داخل الـ Input
+            document.getElementById('comm-start').value = formatDateForInput(ad.start_date); 
+            document.getElementById('comm-end').value = formatDateForInput(ad.end_date);
+            
             document.getElementById('comm-action').value = ad.click_action_type; document.getElementById('comm-priority').value = ad.priority;
             document.getElementById('comm-url').value = ad.target_url; document.getElementById('comm-active').checked = ad.is_active;
             openModal('commercial-modal');
@@ -264,12 +321,20 @@
         function saveCommercialAd() {
             let id = document.getElementById('comm-id').value;
             let data = {
-                name: document.getElementById('comm-name').value, title: document.getElementById('comm-title').value,
-                image_url: document.getElementById('comm-image').value, start_date: document.getElementById('comm-start').value,
-                end_date: document.getElementById('comm-end').value, click_action_type: document.getElementById('comm-action').value,
+                name: document.getElementById('comm-name').value, 
+                title: document.getElementById('comm-title').value,
+                image_url: document.getElementById('comm-image').value, 
+                
+                // تحويل المدخل إلى Date ليُحفظ كـ Timestamp
+                start_date: parseDateForFirestore(document.getElementById('comm-start').value),
+                end_date: parseDateForFirestore(document.getElementById('comm-end').value), 
+                
+                click_action_type: document.getElementById('comm-action').value,
                 priority: parseInt(document.getElementById('comm-priority').value) || 0, target_url: document.getElementById('comm-url').value,
                 is_active: document.getElementById('comm-active').checked
             };
+            
+            // انتبه: استخدمت 'commercial_ads' بناءً على كودك السابق
             if(id) db.collection('commercial_ads').doc(id).update(data).then(() => { closeModal('commercial-modal'); showToast("تم التعديل"); });
             else db.collection('commercial_ads').add(data).then(() => { closeModal('commercial-modal'); showToast("تم الحفظ"); });
         }
@@ -277,9 +342,14 @@
         function savePublicAd() {
             let category = document.querySelector('input[name="pub-category"]:checked').value;
             let data = {
-                title: document.getElementById('pub-title').value, message: document.getElementById('pub-message').value,
-                category: category, phone_number: category === 'specific' ? document.getElementById('pub-phone').value : "",
-                end_date: document.getElementById('pub-end').value, create_date: new Date().toISOString()
+                title: document.getElementById('pub-title').value, 
+                message: document.getElementById('pub-message').value,
+                category: category, 
+                phone_number: category === 'specific' ? document.getElementById('pub-phone').value : "",
+                
+                // تحويل المدخل إلى Date ليُحفظ كـ Timestamp
+                end_date: parseDateForFirestore(document.getElementById('pub-end').value), 
+                create_date: new Date() // نحفظه ككائن Date بدلاً من String لكي يتم التعامل معه كـ Timestamp
             };
             db.collection('public_ads').add(data).then(() => { closeModal('public-modal'); showToast("تم إرسال الإشعار"); });
         }
