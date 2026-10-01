@@ -94,7 +94,6 @@
             <p class="text-gray-500 mb-6" id="delete-message">هل أنت متأكد من حذف هذا التاجر؟</p>
             <div class="flex gap-3 justify-center">
                 <button onclick="closeModal('delete-modal')" class="flex-1 px-4 py-2 bg-gray-100 font-bold rounded-lg">إلغاء</button>
-                <!-- تم إضافة دالة الحذف هنا -->
                 <button id="confirm-delete-btn" onclick="executeDelete()" class="flex-1 px-4 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors">حذف</button>
             </div>
         </div>
@@ -136,7 +135,8 @@
         };
 
         function fetchTraders() {
-            db.collection('traders').onSnapshot((snapshot) => {
+            // التعديل هنا: جلب البيانات من جدول traders_management
+            db.collection('traders_management').onSnapshot((snapshot) => {
                 tradersData = [];
                 snapshot.forEach((doc) => {
                     let data = doc.data();
@@ -227,7 +227,8 @@
             };
 
             if (id) {
-                db.collection('traders').doc(id).update(traderData).then(() => { 
+                // التعديل هنا: التحديث في جدول traders_management
+                db.collection('traders_management').doc(id).update(traderData).then(() => { 
                     closeModal('trader-modal'); 
                     showToast("تم التعديل بنجاح"); 
                 }).catch((error) => {
@@ -236,7 +237,8 @@
                 });
             } else {
                 traderData.created_at = firebase.firestore.FieldValue.serverTimestamp(); // إنشاء الطابع الزمني
-                db.collection('traders').add(traderData).then(() => { 
+                // التعديل هنا: الإضافة في جدول traders_management
+                db.collection('traders_management').add(traderData).then(() => { 
                     closeModal('trader-modal'); 
                     showToast("تم إضافة التاجر بنجاح"); 
                 }).catch((error) => {
@@ -255,7 +257,8 @@
         function executeDelete() {
             if (!traderToDeleteId) return;
             
-            db.collection('traders').doc(traderToDeleteId).delete().then(() => {
+            // التعديل هنا: الحذف من جدول traders_management
+            db.collection('traders_management').doc(traderToDeleteId).delete().then(() => {
                 closeModal('delete-modal');
                 showToast("تم الحذف بنجاح");
                 traderToDeleteId = null;
