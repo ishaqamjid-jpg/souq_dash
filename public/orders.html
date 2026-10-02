@@ -102,7 +102,6 @@ try {
     console.warn("Messaging not supported.");
 }
 
-// تحويل tabs إلى let لنتمكن من إخفاء تبويب الموافقة الإدارية
 let tabs = [
 { id: 'pending', label: 'المعلقة' },
 { id: 'waiting admin approvel', label: 'الموافقة الإدارية' },
@@ -113,25 +112,22 @@ let tabs = [
 let currentTab = 'pending';
 let ordersData = [];
 let clientsData = {};
+let tradersList = [];
 let adminUsername = "موظف";
 let openOrders = new Set(); 
 
 window.onload = function() {
-    // التحقق الآمن والمستمر من الجلسة
     firebase.auth().onAuthStateChanged(function(user) {
         const userRole = sessionStorage.getItem('userRole');
         const displayName = sessionStorage.getItem('displayName');
 
         if (user && userRole) {
-            // أخذ الاسم من الجلسة لحفظه لاحقاً في الطلبات
             adminUsername = displayName || "موظف";
             let nameDisplay = document.getElementById('adminNameDisplay');
             if(nameDisplay) nameDisplay.innerText = "أهلاً، " + adminUsername;
 
-            // إخفاء تاب "الموافقة الإدارية" وصفحات القائمة للموظفين
             if (userRole === 'employee') {
                 tabs = tabs.filter(tab => tab.id !== 'waiting admin approvel');
-                
                 const adminOnlyElements = ['nav-ads', 'nav-trader', 'nav-clients'];
                 adminOnlyElements.forEach(id => {
                     const el = document.getElementById(id);
@@ -139,17 +135,16 @@ window.onload = function() {
                 });
             }
             
+            fetchTraders(); // جلب قائمة التجار
             fetchOrders();
             if(messaging) requestNotificationPermission();
         } else {
-            // طرد المستخدم إذا لم يمتلك جلسة سليمة أو دخل برابط مباشر
             sessionStorage.clear();
             window.location.replace("index.html");
         }
     });
 };
 
-// حدث زر تسجيل الخروج
 document.getElementById('logoutBtn').addEventListener('click', () => {
     firebase.auth().signOut().then(() => {
         sessionStorage.clear();
@@ -173,6 +168,18 @@ function renderTabs() {
         button.innerText = tab.label;
         button.onclick = () => { currentTab = tab.id; renderTabs(); renderOrders(); };
         tabsContainer.appendChild(button);
+    });
+}
+
+function fetchTraders() {
+    db.collection('traders_management').onSnapshot(snapshot => {
+        let tempTraders = [];
+        snapshot.forEach(doc => {
+            let data = doc.data();
+            if (data.trader_name) tempTraders.push(data.trader_name);
+        });
+        tradersList = tempTraders;
+        if (ordersData.length > 0) renderOrders();
     });
 }
 
@@ -276,18 +283,36 @@ function renderOrders() {
             
             let purchaseField = isGoing ? '<td class="p-3"><input type="number" class="border border-gray-300 p-2 w-28 text-center rounded focus:border-blue-500 text-red-600" value="' + (item.purchase_price || '') + '" onchange="updateSubItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'purchase_price\', this.value)"></td>' : '';
             
-            let traderField = '<input type="text" placeholder="اسم التاجر" class="border border-gray-300 p-2 rounded w-full focus:border-blue-500" value="' + s_trader + '" onchange="updateSubItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'trader_name\', this.value)" ' + disabledAttr + '>';
+            // توليد خيارات التجار
+            let traderOptions = '<option value="" disabled ' + (!s_trader ? 'selected' : '') + '>اختر التاجر</option>';
+            tradersList.forEach(t => {
+                let selected = (s_trader === t) ? 'selected' : '';
+                traderOptions += `<option value="${t}" ${selected}>${t}</option>`;
+            });
+
+            // حقل التاجر مع زر إضافة تاجر جديد
+            let traderField = `
+                <div class="flex items-center gap-2">
+                    <select class="border border-gray-300 p-2 rounded w-full focus:border-blue-500 min-w-[130px]" 
+                            onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'trader_name', this.value)" 
+                            ${disabledAttr} required>
+                        ${traderOptions}
+                    </select>
+                    ${!disabledAttr ? `<a href="trader.html" target="_blank" title="إضافة تاجر جديد" class="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 rounded flex items-center justify-center w-[42px] h-[42px] shrink-0 transition"><i class="fas fa-plus"></i></a>` : ''}
+                </div>
+            `;
             
             let invoiceVal = isGoing ? safeStr(item.invoice_number) : safeStr(item.quotation_number);
             let invoiceFieldType = isGoing ? 'invoice_number' : 'quotation_number';
+            let invoicePlaceholder = isGoing ? 'رقم الفاتورة' : 'رقم فاتورة العرض';
 
-            let invoiceCol = '<input type="text" class="border border-gray-300 p-2 w-32 rounded text-center focus:border-blue-500 uppercase" placeholder="رقم الفاتورة" value="' + invoiceVal + '" onchange="updateSubItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'' + invoiceFieldType + '\', this.value)" ' + disabledAttr + '>';
+            let invoiceCol = '<input type="text" class="border border-gray-300 p-2 w-32 rounded text-center focus:border-blue-500 uppercase" placeholder="' + invoicePlaceholder + '" value="' + invoiceVal + '" onchange="updateSubItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'' + invoiceFieldType + '\', this.value)" ' + disabledAttr + '>';
             
             if(isAdminApproval) {
                 invoiceCol += '<button onclick="saveQuotationPrice(\'' + order.order_id + '\', \'' + item.item_id + '\')" class="text-xs text-blue-600 hover:text-blue-800 font-bold block mt-2 mx-auto">حفظ العرض</button>';
             }
 
-            itemsHtml += '<tr class="border-b ' + bgClass + '"><td class="p-3 font-bold">' + nameField + '</td><td class="p-3 whitespace-nowrap">' + safeStr(item.quality_type) + ' | كمية: <span class="font-black bg-gray-200 px-2 rounded">' + (item.quantity || 1) + '</span></td>' + pricingFields + purchaseField + '<td class="p-3 min-w-[140px]">' + traderField + '</td><td class="p-3">' + invoiceCol + '</td></tr>';
+            itemsHtml += '<tr class="border-b ' + bgClass + '"><td class="p-3 font-bold">' + nameField + '</td><td class="p-3 whitespace-nowrap">' + safeStr(item.quality_type) + ' | كمية: <span class="font-black bg-gray-200 px-2 rounded">' + (item.quantity || 1) + '</span></td>' + pricingFields + purchaseField + '<td class="p-3 min-w-[200px]">' + traderField + '</td><td class="p-3">' + invoiceCol + '</td></tr>';
         });
 
         let orderHtml = '<div class="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-200 overflow-hidden hover:shadow-md">';
@@ -313,12 +338,13 @@ function renderOrders() {
         orderHtml += '<div class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border border-gray-200 ml-2"><i id="icon-' + order.order_id + '" class="fas ' + iconDir + ' text-[#0D1B6D]"></i></div></div>';
 
         let detailsClass = openOrders.has(order.order_id) ? 'open' : '';
+        let invoiceHeader = isGoing ? 'رقم فاتورة الشراء' : 'رقم فاتورة العرض';
         orderHtml += '<div id="details-' + order.order_id + '" class="order-details ' + detailsClass + ' p-5 border-t border-gray-200 bg-slate-50/50">';
         orderHtml += '<h3 class="font-bold text-blue-600 mb-4 flex items-center gap-2"><i class="fas fa-cogs"></i> القطع والتسعير</h3>';
         orderHtml += '<div class="overflow-x-auto mb-5 rounded-lg border border-gray-200 shadow-sm"><table class="w-full text-sm text-right border-collapse bg-white min-w-[800px]"><thead class="bg-[#0D1B6D] text-white"><tr><th class="p-3">القطعة</th><th class="p-3">النوع/الكمية</th>';
         if(isPending || isAdminApproval) orderHtml += '<th class="p-3">مبلغ العرض</th><th class="p-3">سعر البيع</th>';
         if(isGoing) orderHtml += '<th class="p-3">سعر الشراء</th>';
-        orderHtml += '<th class="p-3">التاجر</th><th class="p-3">رقم الفاتورة</th></tr></thead><tbody>' + itemsHtml + '</tbody></table></div>';
+        orderHtml += '<th class="p-3">التاجر</th><th class="p-3">' + invoiceHeader + '</th></tr></thead><tbody>' + itemsHtml + '</tbody></table></div>';
         
         if(isPending) orderHtml += '<button class="text-[#4CAF50] font-bold flex items-center gap-2 mb-6 hover:bg-green-50 px-4 py-2 rounded border border-green-200 bg-white" onclick="addNewSubItem(\'' + order.order_id + '\')"><i class="fas fa-plus"></i> إضافة صنف</button>';
         
@@ -452,7 +478,6 @@ function processStatus(orderId, newStatus) {
     if(newStatus === 'canceled') removeAdminAlarm(orderId);
 }
 
-// دالة الاعتماد والتي تحفظ اسم المستلم من المتغير adminUsername المرتبط بـ sessionStorage
 function requestAdminApproval(orderId) {
     let order = ordersData.find(o => o.order_id === orderId);
     if(order && order.items && order.items.some(i => !i.trader_name)) {
