@@ -48,13 +48,13 @@ body { font-family: 'Tajawal', sans-serif; }
 <nav class="flex-1 px-4 py-6 space-y-2">
 <a href="dashboard.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">الرئيسية</a>
 <a href="orders.html" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">إدارة الطلبات</a>
-<a href="reports.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">التقارير والإحصائيات</a>
-<a href="ads.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الإعلانات</a>
-<a href="trader.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة التجار</a>
-<a href="clients.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">عملاء التطبيق</a>
+<a href="reports.html" id="nav-reports" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">التقارير والإحصائيات</a>
+<a href="ads.html" id="nav-ads" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الإعلانات</a>
+<a href="trader.html" id="nav-trader" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة التجار</a>
+<a href="clients.html" id="nav-clients" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">عملاء التطبيق</a>
 </nav>
 <div class="p-4 border-t border-gray-800">
-<a href="index.html" class="block text-center w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">تسجيل الخروج</a>
+    <button id="logoutBtn" class="block text-center w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">تسجيل الخروج</button>
 </div>
 </aside>
 
@@ -93,7 +93,6 @@ appId: "1:186585426069:web:9f34cedeee498d1bd3539c"
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// حماية الكود من الانهيار إذا لم تكن الإشعارات مدعومة
 let messaging = null;
 try {
     if(firebase.messaging.isSupported()) {
@@ -103,32 +102,60 @@ try {
     console.warn("Messaging not supported.");
 }
 
-const tabs = [
+// تحويل tabs إلى let لنتمكن من إخفاء تبويب الموافقة الإدارية
+let tabs = [
 { id: 'pending', label: 'المعلقة' },
 { id: 'waiting admin approvel', label: 'الموافقة الإدارية' },
 { id: 'waiting for approvel', label: 'قيد موافقة العميل' },
 { id: 'going', label: 'جاري التوصيل' }
 ];
+
 let currentTab = 'pending';
 let ordersData = [];
 let clientsData = {};
-let adminUsername = "مدير النظام";
-let openOrders = new Set(); // لحفظ الطلبات المفتوحة وعدم إغلاقها عند التحديث
+let adminUsername = "موظف";
+let openOrders = new Set(); 
 
 window.onload = function() {
+    // التحقق الآمن والمستمر من الجلسة
     firebase.auth().onAuthStateChanged(function(user) {
-        if (user) {
-            adminUsername = user.displayName || (user.email ? user.email.split('@')[0] : "مدير النظام");
+        const userRole = sessionStorage.getItem('userRole');
+        const displayName = sessionStorage.getItem('displayName');
+
+        if (user && userRole) {
+            // أخذ الاسم من الجلسة لحفظه لاحقاً في الطلبات
+            adminUsername = displayName || "موظف";
             let nameDisplay = document.getElementById('adminNameDisplay');
             if(nameDisplay) nameDisplay.innerText = "أهلاً، " + adminUsername;
+
+            // إخفاء تاب "الموافقة الإدارية" وصفحات القائمة للموظفين
+            if (userRole === 'employee') {
+                tabs = tabs.filter(tab => tab.id !== 'waiting admin approvel');
+                
+                const adminOnlyElements = ['nav-ads', 'nav-trader', 'nav-clients'];
+                adminOnlyElements.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+            }
             
             fetchOrders();
             if(messaging) requestNotificationPermission();
         } else {
-            window.location.href = "index.html";
+            // طرد المستخدم إذا لم يمتلك جلسة سليمة أو دخل برابط مباشر
+            sessionStorage.clear();
+            window.location.replace("index.html");
         }
     });
 };
+
+// حدث زر تسجيل الخروج
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    firebase.auth().signOut().then(() => {
+        sessionStorage.clear();
+        window.location.replace("index.html");
+    });
+});
 
 function safeStr(str) {
     if (!str && str !== 0) return '';
@@ -162,7 +189,6 @@ function fetchOrders() {
             tempOrders.push(order);
         }
         
-        // جلب القطع من النظام الجديد (Subcollection) مع التوافقية القديمة
         for (let order of tempOrders) {
             try {
                 let itemsSnap = await db.collection('orders').doc(order.order_id).collection('items').get();
@@ -182,7 +208,6 @@ function fetchOrders() {
             fetchClientInfo(order.user_id, order.order_id);
         }
         
-        // الترتيب من الأحدث للأقدم
         ordersData = tempOrders.sort((a, b) => {
             let t1 = a.created_at ? (a.created_at.seconds || 0) : 0;
             let t2 = b.created_at ? (b.created_at.seconds || 0) : 0;
@@ -245,7 +270,6 @@ function renderOrders() {
             let s_part = safeStr(item.part_name);
             let s_trader = safeStr(item.trader_name);
             
-            // إضافة زر حذف القطعة إذا كنا في تاب المعلقة
             let nameField = isPending ? '<div class="flex gap-2"><input type="text" class="border border-gray-300 p-2 w-full rounded focus:outline-none focus:border-blue-500 font-medium" value="' + s_part + '" onchange="updateSubItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'part_name\', this.value)">' + (order.items.length > 1 ? '<button onclick="deleteItem(\'' + order.order_id + '\', \'' + item.item_id + '\')" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>' : '') + '</div>' : s_part;
             
             let pricingFields = (isPending || isAdminApproval) ? '<td class="p-3"><input type="number" class="border border-gray-300 p-2 w-28 text-center rounded focus:border-blue-500" value="' + (item.quotation_price || '') + '" onchange="updateSubItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'quotation_price\', this.value)"></td><td class="p-3"><input type="number" class="border border-gray-300 p-2 w-28 text-center rounded focus:border-blue-500 text-green-700" value="' + (item.selling_price || '') + '" onchange="updateSubItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'selling_price\', this.value)"></td>' : '';
@@ -259,7 +283,6 @@ function renderOrders() {
 
             let invoiceCol = '<input type="text" class="border border-gray-300 p-2 w-32 rounded text-center focus:border-blue-500 uppercase" placeholder="رقم الفاتورة" value="' + invoiceVal + '" onchange="updateSubItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'' + invoiceFieldType + '\', this.value)" ' + disabledAttr + '>';
             
-            // زر حفظ العرض
             if(isAdminApproval) {
                 invoiceCol += '<button onclick="saveQuotationPrice(\'' + order.order_id + '\', \'' + item.item_id + '\')" class="text-xs text-blue-600 hover:text-blue-800 font-bold block mt-2 mx-auto">حفظ العرض</button>';
             }
@@ -276,7 +299,6 @@ function renderOrders() {
         orderHtml += '<div class="text-gray-600"><i class="fas fa-industry text-gray-400 ml-1"></i> القاعدة (VIN): <span class="uppercase tracking-wide">' + safeStr(order.vin_number) + '</span></div>';
         orderHtml += '<div class="text-gray-600"><i class="fas fa-map-marker-alt text-gray-400 ml-1"></i> الموقع: ' + safeStr(order.delivery_location) + '</div>';
         
-        // الخانات الجديدة (العملاء ومستلم الطلب)
         orderHtml += '<div class="text-gray-600 font-bold" id="client-name-' + order.order_id + '">اسم العميل: جاري الجلب...</div>';
         orderHtml += '<div class="text-gray-600"><i class="fas fa-user text-gray-400 ml-1"></i> الهاتف: ' + safeStr(order.user_number) + '</div>';
         orderHtml += '<div class="text-gray-600" id="client-whats-' + order.order_id + '">رقم الواتساب: جاري الجلب...</div>';
@@ -285,9 +307,8 @@ function renderOrders() {
             orderHtml += '<div class="text-[#E65100] font-bold mt-2 col-span-full border-t border-gray-100 pt-2">مستلم الطلب: ' + safeStr(order.order_receiving_by) + '</div>';
         }
         
-        orderHtml += '</div></div>'; // إغلاق grid و flex-1
+        orderHtml += '</div></div>'; 
         
-        // السهم الذي يتغير حسب حالة النافذة (مفتوحة/مغلقة)
         let iconDir = openOrders.has(order.order_id) ? 'fa-chevron-up' : 'fa-chevron-down';
         orderHtml += '<div class="w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 hover:bg-gray-100 border border-gray-200 ml-2"><i id="icon-' + order.order_id + '" class="fas ' + iconDir + ' text-[#0D1B6D]"></i></div></div>';
 
@@ -336,7 +357,6 @@ function updateOrderField(orderId, field, value) {
     db.collection('orders').doc(orderId).update({ [field]: val }).catch(()=>{});
 }
 
-// التحديث المزدوج: يحدث في Array القديم و Subcollection الجديد معاً
 function updateSubItem(orderId, itemId, field, value) {
     let val = field.includes('price') ? (parseFloat(value) || 0) : value;
     let order = ordersData.find(o => o.order_id === orderId);
@@ -432,6 +452,7 @@ function processStatus(orderId, newStatus) {
     if(newStatus === 'canceled') removeAdminAlarm(orderId);
 }
 
+// دالة الاعتماد والتي تحفظ اسم المستلم من المتغير adminUsername المرتبط بـ sessionStorage
 function requestAdminApproval(orderId) {
     let order = ordersData.find(o => o.order_id === orderId);
     if(order && order.items && order.items.some(i => !i.trader_name)) {
@@ -539,7 +560,6 @@ async function sendUserAlarm(userId, orderNumber, title, message) {
     } catch(e){}
 }
 
-// إعدادات الإشعارات (كما في الكود القديم)
 function requestNotificationPermission() {
     Notification.requestPermission().then((permission) => {
         if (permission === 'granted' && messaging) {
