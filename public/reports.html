@@ -10,7 +10,9 @@
     
     <style>
         body { font-family: 'Tajawal', sans-serif; }
-        .hidden-tab { display: none; }
+        .hidden-element { display: none !important; }
+        .tab-btn { border-bottom-width: 4px; border-color: transparent; color: #6b7280; }
+        .tab-btn.active { border-color: #0D1B6D; color: #0D1B6D; }
     </style>
 </head>
 <body class="bg-gray-50 flex h-screen overflow-hidden">
@@ -22,81 +24,113 @@
         <nav class="flex-1 px-4 py-6 space-y-2">
             <a href="dashboard.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">الرئيسية</a>
             <a href="orders.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الطلبات</a>
-            <a href="reports.html" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">التقارير والإحصائيات</a>
-            <a href="ads.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الإعلانات</a>
-            <a href="trader.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة التجار</a>
-            <a href="clients.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">عملاء التطبيق</a>
+            <a href="reports.html" id="nav-reports" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">التقارير وسجل الطلبات</a>
+            <a href="ads.html" id="nav-ads" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الإعلانات</a>
+            <a href="trader.html" id="nav-trader" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة التجار</a>
+            <a href="clients.html" id="nav-clients" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">عملاء التطبيق</a>
         </nav>
         <div class="p-4 border-t border-gray-800">
-            <a href="index.html" class="block text-center w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">تسجيل الخروج</a>
+            <button id="logoutBtn" class="block text-center w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">تسجيل الخروج</button>
         </div>
     </aside>
 
     <div class="flex-1 flex flex-col overflow-hidden">
         <header class="h-16 bg-white shadow-sm flex items-center justify-between px-8 shrink-0 z-10 border-b border-gray-200">
-            <h2 class="text-xl font-bold text-gray-800">التقارير والإحصائيات</h2>
+            <h2 class="text-xl font-bold text-gray-800" id="header-title">التقارير وسجل الطلبات</h2>
             <div class="flex items-center gap-6">
                 <div class="text-sm font-semibold text-gray-600 flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">M</div>
-                    مدير النظام
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold" id="admin-initial">-</div>
+                    <span id="admin-name">جاري التحميل...</span>
                 </div>
             </div>
         </header>
 
         <main class="flex-1 overflow-y-auto bg-gray-50 flex flex-col relative">
-            <div class="flex bg-white px-4 border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-                <button id="btn-tab-stats" onclick="switchTab('stats')" class="px-6 py-4 font-bold border-b-4 border-[#0D1B6D] text-[#0D1B6D]">الإحصائيات</button>
-                <button id="btn-tab-orders" onclick="switchTab('orders')" class="px-6 py-4 font-bold border-b-4 border-transparent text-gray-500 hover:text-gray-800">التقارير وسجل الطلبات</button>
-                <button id="btn-tab-acc" onclick="switchTab('acc')" class="px-6 py-4 font-bold border-b-4 border-transparent text-gray-500 hover:text-gray-800">تقارير الحسابات</button>
+            <div class="flex bg-white px-4 border-b border-gray-200 sticky top-0 z-10 shadow-sm" id="tabs-container">
+                <button id="btn-tab-stats" onclick="switchTab('stats')" class="tab-btn px-6 py-4 font-bold transition-colors">الإحصائيات</button>
+                <button id="btn-tab-orders" onclick="switchTab('orders')" class="tab-btn px-6 py-4 font-bold transition-colors">التقارير وسجل الطلبات</button>
+                <button id="btn-tab-acc" onclick="switchTab('acc')" class="tab-btn px-6 py-4 font-bold transition-colors">تقارير الحسابات</button>
             </div>
 
             <div class="p-6 max-w-7xl w-full mx-auto">
-                <!-- تبويب الإحصائيات -->
-                <div id="tab-stats">
+                
+                <!-- 1. تبويب الإحصائيات (مخفي للموظفين) -->
+                <div id="tab-stats" class="hidden-element">
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-                        <button onclick="analyzeStats()" class="w-full bg-[#0D1B6D] hover:bg-blue-900 text-white font-bold py-3 rounded shadow transition-colors">تحليل وعرض الإحصائيات الشاملة</button>
+                        <label class="flex items-center gap-2 mb-4 cursor-pointer">
+                            <input type="checkbox" id="stats-date-enable" class="w-5 h-5 accent-[#0D1B6D]" onchange="toggleDateFilter('stats')">
+                            <span class="font-bold text-gray-700">تفعيل فلتر التاريخ</span>
+                        </label>
+                        <div id="stats-date-fields" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 hidden-element">
+                            <input type="date" id="stats-from-date" class="border border-gray-300 p-2.5 rounded focus:border-blue-500 outline-none">
+                            <input type="date" id="stats-to-date" class="border border-gray-300 p-2.5 rounded focus:border-blue-500 outline-none">
+                        </div>
+                        <button onclick="analyzeStats()" class="w-full bg-[#0D1B6D] hover:bg-blue-900 text-white font-bold py-3 rounded shadow transition-colors">تحليل وعرض الإحصائيات</button>
                     </div>
 
-                    <div id="stats-results" class="hidden-tab">
-                        <h3 class="font-bold text-gray-700 mb-4 text-lg">النتائج الإحصائية (الحية):</h3>
+                    <div id="stats-results" class="hidden-element">
+                        <h3 class="font-bold text-gray-700 mb-4 text-lg">النتائج الإحصائية:</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <div class="bg-[#4CAF50] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">الطلبات المكتملة</span><span id="stat-completed" class="text-2xl font-black">0</span></div>
-                            <div class="bg-[#E53935] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">الطلبات المرفوضة/ملغاة</span><span id="stat-canceled" class="text-2xl font-black">0</span></div>
-                            <div class="bg-[#00ACC1] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">رسوم التوصيل</span><span id="stat-transport" class="text-2xl font-black">0</span></div>
+                            <div class="bg-[#4CAF50] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">المكتملة</span><span id="stat-completed" class="text-2xl font-black">0</span></div>
+                            <div class="bg-[#E53935] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">المرفوضة</span><span id="stat-canceled" class="text-2xl font-black">0</span></div>
+                            <div class="bg-[#00ACC1] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">المواصلات</span><span id="stat-transport" class="text-2xl font-black">0</span></div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <div class="bg-[#F57C00] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">إجمالي التكاليف (المشتريات)</span><span id="stat-costs" class="text-2xl font-black">0</span></div>
-                            <div class="bg-[#8E24AA] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">إجمالي الإيرادات (المبيعات)</span><span id="stat-revenue" class="text-2xl font-black">0</span></div>
-                            <div class="bg-[#2E7D32] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">الربح الصافي (نظري)</span><span id="stat-profit" class="text-2xl font-black">0</span></div>
+                            <div class="bg-[#F57C00] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">التكاليف</span><span id="stat-costs" class="text-2xl font-black">0</span></div>
+                            <div class="bg-[#8E24AA] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">الإيرادات</span><span id="stat-revenue" class="text-2xl font-black">0</span></div>
+                            <div class="bg-[#2E7D32] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">الربح</span><span id="stat-profit" class="text-2xl font-black">0</span></div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="bg-[#43A047] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">إجمالي القبض (سندات فعلية)</span><span id="stat-income" class="text-2xl font-black">0</span></div>
-                            <div class="bg-[#D32F2F] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">إجمالي الصرف (سندات فعلية)</span><span id="stat-expense" class="text-2xl font-black">0</span></div>
+                            <div class="bg-[#43A047] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">إجمالي القبض</span><span id="stat-income" class="text-2xl font-black">0</span></div>
+                            <div class="bg-[#D32F2F] text-white p-4 rounded-xl shadow text-center flex flex-col justify-center h-24"><span class="text-xs font-bold opacity-90">إجمالي الصرف</span><span id="stat-expense" class="text-2xl font-black">0</span></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- تبويب الطلبات -->
-                <div id="tab-orders" class="hidden-tab">
+                <!-- 2. تبويب سجل الطلبات (مطابق للـ Android) -->
+                <div id="tab-orders" class="hidden-element">
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <input type="text" id="filter-order-num" placeholder="رقم الطلب" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
-                            <input type="text" id="filter-phone" placeholder="رقم العميل" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
-                            <select id="filter-status" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500 bg-white">
+                        <!-- الصفوف الأربعة للبحث -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <input type="text" id="report-order-number" placeholder="رقم الطلب" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                            <input type="text" id="report-phone-number" placeholder="رقم العميل" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                            
+                            <input type="text" id="report-trader-name" placeholder="اسم التاجر" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                            <input type="text" id="report-part-name" placeholder="اسم القطعة" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                            
+                            <input type="text" id="report-quotation-number" placeholder="رقم فاتورة عرض السعر" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                            <input type="text" id="report-invoice-number" placeholder="رقم فاتورة البيع" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
+                            
+                            <select id="report-order-status" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500 bg-white">
                                 <option value="">حالة الطلب (الكل)</option>
-                                <option value="completed">مكتمل (completed)</option>
-                                <option value="canceled">مرفوض (canceled)</option>
-                                <option value="going">جاري التوصيل (going)</option>
-                                <option value="pending">معلق (pending)</option>
+                                <option value="completed">مكتمل</option>
+                                <option value="canceled">مرفوض</option>
+                                <option value="waiting admin approvel">انتظار الموافقة الإدارية</option>
+                                <option value="waiting for approvel">قيد موافقة العميل</option>
+                                <option value="going">جاري التوصيل</option>
+                                <option value="pending">معلق</option>
                             </select>
+                            
+                            <input type="text" id="report-receiving-by" placeholder="مستلم الطلب" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
                         </div>
-                        <button onclick="searchOrders()" class="w-full bg-[#0D1B6D] hover:bg-blue-900 text-white font-bold py-3 rounded shadow transition-colors">بحث في السجل</button>
+
+                        <!-- التاريخ لسجل الطلبات -->
+                        <label class="flex items-center gap-2 mb-4 cursor-pointer">
+                            <input type="checkbox" id="reports-date-enable" class="w-5 h-5 accent-[#0D1B6D]" onchange="toggleDateFilter('reports')">
+                            <span class="font-bold text-gray-700">تفعيل فلتر التاريخ</span>
+                        </label>
+                        <div id="reports-date-fields" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 hidden-element">
+                            <input type="date" id="reports-from-date" class="border border-gray-300 p-2.5 rounded focus:border-blue-500 outline-none">
+                            <input type="date" id="reports-to-date" class="border border-gray-300 p-2.5 rounded focus:border-blue-500 outline-none">
+                        </div>
+
+                        <button onclick="searchOrdersReports()" class="w-full bg-[#0D1B6D] hover:bg-blue-900 text-white font-bold py-3 rounded shadow transition-colors">بحث في السجل</button>
                     </div>
                     <div id="orders-results-container" class="space-y-4"></div>
                 </div>
 
-                <!-- تبويب الحسابات -->
-                <div id="tab-acc" class="hidden-tab">
+                <!-- 3. تبويب الحسابات (مخفي للموظفين) -->
+                <div id="tab-acc" class="hidden-element">
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <input type="text" id="acc-doc-num" placeholder="رقم السند" class="border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500">
@@ -106,6 +140,18 @@
                                 <option value="صرف">صرف</option>
                             </select>
                         </div>
+                        <input type="text" id="acc-details" placeholder="التفاصيل" class="w-full border border-gray-300 p-2.5 rounded focus:outline-none focus:border-blue-500 mb-4">
+                        
+                        <!-- التاريخ لتقارير الحسابات -->
+                        <label class="flex items-center gap-2 mb-4 cursor-pointer">
+                            <input type="checkbox" id="acc-date-enable" class="w-5 h-5 accent-[#0D1B6D]" onchange="toggleDateFilter('acc')">
+                            <span class="font-bold text-gray-700">تفعيل فلتر التاريخ</span>
+                        </label>
+                        <div id="acc-date-fields" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 hidden-element">
+                            <input type="date" id="acc-from-date" class="border border-gray-300 p-2.5 rounded focus:border-blue-500 outline-none">
+                            <input type="date" id="acc-to-date" class="border border-gray-300 p-2.5 rounded focus:border-blue-500 outline-none">
+                        </div>
+
                         <button onclick="searchAccounting()" class="w-full bg-[#0D1B6D] hover:bg-blue-900 text-white font-bold py-3 rounded shadow transition-colors">بحث الحسابات</button>
                     </div>
                     <div id="acc-results-container" class="space-y-4"></div>
@@ -117,61 +163,160 @@
 
     <!-- استدعاء فايربيس مع Auth -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> <!-- السطر المضاف -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
     <script>
-        const firebaseConfig = { apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg", authDomain: "souqalghiyar.firebaseapp.com", projectId: "souqalghiyar", storageBucket: "souqalghiyar.firebasestorage.app", messagingSenderId: "186585426069", appId: "1:186585426069:web:9f34cedeee498d1bd3539c" };
+        const firebaseConfig = { 
+            apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg", 
+            authDomain: "souqalghiyar.firebaseapp.com", 
+            projectId: "souqalghiyar", 
+            storageBucket: "souqalghiyar.firebasestorage.app", 
+            messagingSenderId: "186585426069", 
+            appId: "1:186585426069:web:9f34cedeee498d1bd3539c" 
+        };
         if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const db = firebase.firestore();
 
-        let ordersData = [];
+        let ordersData = []; // سيحتوي على الطلبات و items الخاصة بكل طلب
         let accountingData = [];
+        let currentUserRole = "employee";
 
-        // التعديل هنا: جلب البيانات فقط في حال كان المستخدم مسجلاً
         window.onload = function() {
+            // التحقق من الجلسة والصلاحيات
             firebase.auth().onAuthStateChanged(function(user) {
-                if (user) {
-                    db.collection('orders').onSnapshot(snap => {
-                        ordersData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    });
+                const userRole = sessionStorage.getItem('userRole');
+                const displayName = sessionStorage.getItem('displayName');
 
-                    db.collection('accounting').onSnapshot(snap => {
-                        accountingData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    });
+                if (user && userRole) {
+                    currentUserRole = userRole;
+                    
+                    if (displayName) {
+                        document.getElementById('admin-name').innerText = displayName;
+                        document.getElementById('admin-initial').innerText = displayName.charAt(0).toUpperCase();
+                    }
+
+                    // إخفاء التبويبات والصفحات للموظفين
+                    if (userRole === 'employee') {
+                        document.getElementById('btn-tab-stats').classList.add('hidden-element');
+                        document.getElementById('btn-tab-acc').classList.add('hidden-element');
+                        document.getElementById('header-title').innerText = "التقارير وسجل الطلبات";
+                        
+                        const adminOnlyElements = ['nav-ads', 'nav-clients'];
+                        adminOnlyElements.forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) el.style.display = 'none';
+                        });
+                        
+                        // فتح تبويب الطلبات افتراضياً للموظف
+                        switchTab('orders');
+                    } else {
+                        // فتح تبويب الإحصائيات افتراضياً للمدير
+                        switchTab('stats');
+                    }
+
+                    fetchData();
                 } else {
-                    window.location.href = "index.html";
+                    sessionStorage.clear();
+                    window.location.replace("index.html");
                 }
             });
         };
 
-        function switchTab(tabId) {
-            document.getElementById('tab-stats').classList.add('hidden-tab');
-            document.getElementById('tab-orders').classList.add('hidden-tab');
-            document.getElementById('tab-acc').classList.add('hidden-tab');
-            document.getElementById('tab-' + tabId).classList.remove('hidden-tab');
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            firebase.auth().signOut().then(() => {
+                sessionStorage.clear();
+                window.location.replace("index.html");
+            });
+        });
 
-            let inactive = "border-transparent text-gray-500 hover:text-gray-800";
-            let active = "border-[#0D1B6D] text-[#0D1B6D]";
+        // جلب البيانات (الطلبات مع الأصناف، والحسابات)
+        async function fetchData() {
+            // جلب الحسابات (فقط للمدير لتقليل استهلاك الداتا)
+            if(currentUserRole !== 'employee') {
+                db.collection('accounting').onSnapshot(snap => {
+                    accountingData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                });
+            }
 
-            document.getElementById('btn-tab-stats').className = "px-6 py-4 font-bold border-b-4 transition-colors " + (tabId==='stats'?active:inactive);
-            document.getElementById('btn-tab-orders').className = "px-6 py-4 font-bold border-b-4 transition-colors " + (tabId==='orders'?active:inactive);
-            document.getElementById('btn-tab-acc').className = "px-6 py-4 font-bold border-b-4 transition-colors " + (tabId==='acc'?active:inactive);
+            // جلب الطلبات
+            db.collection('orders').onSnapshot(async (snapshot) => {
+                let tempOrders = [];
+                for (let doc of snapshot.docs) {
+                    let order = doc.data();
+                    order.order_id = doc.id;
+                    tempOrders.push(order);
+                }
+                
+                // جلب القطع (items) لكل طلب كما هو في مستودع الأندرويد
+                for (let order of tempOrders) {
+                    try {
+                        let itemsSnap = await db.collection('orders').doc(order.order_id).collection('items').get();
+                        order.items = itemsSnap.empty ? (order.items || []) : itemsSnap.docs.map(iDoc => iDoc.data());
+                    } catch(e) {
+                        order.items = order.items || [];
+                    }
+                }
+                ordersData = tempOrders;
+            });
         }
 
+        function switchTab(tabId) {
+            ['stats', 'orders', 'acc'].forEach(id => {
+                document.getElementById('tab-' + id).classList.add('hidden-element');
+                let btn = document.getElementById('btn-tab-' + id);
+                if(btn) btn.classList.remove('active');
+            });
+            
+            document.getElementById('tab-' + tabId).classList.remove('hidden-element');
+            document.getElementById('btn-tab-' + tabId).classList.add('active');
+        }
+
+        function toggleDateFilter(prefix) {
+            let isEnabled = document.getElementById(prefix + '-date-enable').checked;
+            let fields = document.getElementById(prefix + '-date-fields');
+            if(isEnabled) fields.classList.remove('hidden-element');
+            else fields.classList.add('hidden-element');
+        }
+
+        // 1. دالة الإحصائيات (مطابقة للـ Android)
         function analyzeStats() {
-            document.getElementById('stats-results').classList.remove('hidden-tab');
+            document.getElementById('stats-results').classList.remove('hidden-element');
+            
+            let filteredOrders = [...ordersData];
+            let filteredAcc = [...accountingData];
+
+            let dateEnabled = document.getElementById('stats-date-enable').checked;
+            if (dateEnabled) {
+                let fromDate = document.getElementById('stats-from-date').value;
+                let toDate = document.getElementById('stats-to-date').value;
+                if(fromDate && toDate) {
+                    let fromTime = new Date(fromDate).getTime();
+                    let toTime = new Date(toDate).getTime() + 86399999; 
+                    
+                    filteredOrders = filteredOrders.filter(o => {
+                        let t = o.created_at ? (o.created_at.seconds * 1000) : 0;
+                        return t >= fromTime && t <= toTime;
+                    });
+                    
+                    filteredAcc = filteredAcc.filter(a => {
+                        let t = a.date ? (a.date.seconds * 1000) : 0;
+                        return t >= fromTime && t <= toTime;
+                    });
+                }
+            }
+
             let completed = 0, canceled = 0, transport = 0, costs = 0, revenue = 0, profit = 0, income = 0, expense = 0;
 
-            ordersData.forEach(o => {
-                let status = o.order_status ? o.order_status.toLowerCase() : '';
+            filteredOrders.forEach(o => {
+                let status = (o.order_status || '').toLowerCase();
                 if(status === "completed") {
                     completed++;
                     let fee = parseFloat(o.delivery_fees) || 0;
                     transport += fee;
                     revenue += fee;
                     
-                    if(o.items && Array.isArray(o.items)) {
+                    if(o.items) {
                         o.items.forEach(itm => {
                             let qty = parseInt(itm.quantity) || 1;
                             revenue += (parseFloat(itm.selling_price) || 0) * qty;
@@ -184,7 +329,7 @@
             });
             profit = revenue - costs - transport;
 
-            accountingData.forEach(a => {
+            filteredAcc.forEach(a => {
                 let amt = parseFloat(a.amount) || 0;
                 if(a.type === "قبض") income += amt;
                 if(a.type === "صرف") expense += amt;
@@ -200,38 +345,110 @@
             document.getElementById('stat-expense').innerText = expense;
         }
 
-        function searchOrders() {
-            let fNum = document.getElementById('filter-order-num').value.toLowerCase();
-            let fPhone = document.getElementById('filter-phone').value.toLowerCase();
-            let fStatus = document.getElementById('filter-status').value;
+        // 2. دالة بحث سجل الطلبات (تطابق الـ ViewModel بالكامل)
+        function searchOrdersReports() {
+            let fNum = document.getElementById('report-order-number').value.toLowerCase();
+            let fPhone = document.getElementById('report-phone-number').value.toLowerCase();
+            let fTrader = document.getElementById('report-trader-name').value.toLowerCase();
+            let fPart = document.getElementById('report-part-name').value.toLowerCase();
+            let fQuot = document.getElementById('report-quotation-number').value.toLowerCase();
+            let fInv = document.getElementById('report-invoice-number').value.toLowerCase();
+            let fStatus = document.getElementById('report-order-status').value;
+            let fReceiver = document.getElementById('report-receiving-by').value.toLowerCase();
+            
+            let dateEnabled = document.getElementById('reports-date-enable').checked;
+            let fromDate = document.getElementById('reports-from-date').value;
+            let toDate = document.getElementById('reports-to-date').value;
 
             let results = ordersData.filter(o => {
+                // الفلاتر المباشرة على الطلب
                 if(fNum && o.order_number && !o.order_number.toString().includes(fNum)) return false;
                 if(fPhone && o.user_number && !o.user_number.includes(fPhone)) return false;
-                if(fStatus && o.order_status !== fStatus) return false;
+                if(fStatus && (o.order_status||'').toLowerCase() !== fStatus.toLowerCase()) return false;
+                if(fReceiver && o.order_receiving_by && !o.order_receiving_by.toLowerCase().includes(fReceiver)) return false;
+
+                // فلتر التاريخ
+                if(dateEnabled && fromDate && toDate) {
+                    let fromTime = new Date(fromDate).getTime();
+                    let toTime = new Date(toDate).getTime() + 86399999;
+                    let orderTime = o.created_at ? (o.created_at.seconds * 1000) : 0;
+                    if(orderTime < fromTime || orderTime > toTime) return false;
+                }
+
+                // الفلاتر على القطع (items)
+                if (fTrader || fQuot || fInv || fPart) {
+                    if(!o.items || o.items.length === 0) return false;
+                    
+                    // يجب أن يتوفر عنصر (item) واحد على الأقل يحقق كل شروط القطع المدخلة معاً
+                    let matchAnyItem = o.items.some(item => {
+                        let mTrader = fTrader ? (item.trader_name || '').toLowerCase().includes(fTrader) : true;
+                        let mQuot = fQuot ? (item.quotation_number || '').toString().toLowerCase().includes(fQuot) : true;
+                        let mInv = fInv ? (item.invoice_number || '').toString().toLowerCase().includes(fInv) : true;
+                        let mPart = fPart ? (item.part_name || '').toLowerCase().includes(fPart) : true;
+                        
+                        return mTrader && mQuot && mInv && mPart;
+                    });
+                    
+                    if(!matchAnyItem) return false;
+                }
+
                 return true;
+            });
+
+            // الترتيب من الأحدث للأقدم
+            results.sort((a, b) => {
+                let t1 = a.created_at ? a.created_at.seconds : 0;
+                let t2 = b.created_at ? b.created_at.seconds : 0;
+                return t2 - t1;
             });
 
             let container = document.getElementById('orders-results-container');
             if(results.length > 0) {
                 let htmlStr = '';
                 results.forEach(o => {
-                    let statusAr = o.order_status === "completed" ? "مكتمل" : (o.order_status === "canceled" ? "مرفوض" : o.order_status);
-                    htmlStr += '<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between"><div><div class="font-bold text-[#0D1B6D] mb-1">رقم الطلب: ' + (o.order_number||'') + '</div><div class="text-sm text-gray-500">رقم العميل: <span dir="ltr">' + (o.user_number||'') + '</span></div></div><div class="font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded">' + statusAr + '</div></div>';
+                    let sDate = o.created_at ? new Date(o.created_at.seconds * 1000).toLocaleDateString('ar-EG') : 'غير محدد';
+                    htmlStr += `
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <div class="font-bold text-[#0D1B6D] text-lg">طلب رقم: ${o.order_number||''}</div>
+                                <div class="text-sm text-gray-500">رقم الهاتف: <span dir="ltr">${o.user_number||'غير متوفر'}</span></div>
+                            </div>
+                            <div class="text-left">
+                                <div class="font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded text-sm mb-1">${o.order_status||''}</div>
+                                <div class="text-xs text-gray-400">تاريخ الطلب: ${sDate}</div>
+                            </div>
+                        </div>
+                        ${o.order_receiving_by ? `<div class="text-sm font-bold text-orange-600 mt-2">مستلم الطلب: ${o.order_receiving_by}</div>` : ''}
+                    </div>`;
                 });
                 container.innerHTML = htmlStr;
             } else {
-                container.innerHTML = '<div class="text-center text-gray-500 py-10">لا توجد نتائج مطابقة</div>';
+                container.innerHTML = '<div class="text-center text-gray-500 py-10 font-bold">لا توجد طلبات مطابقة للبحث</div>';
             }
         }
 
+        // 3. دالة بحث الحسابات
         function searchAccounting() {
             let fDoc = document.getElementById('acc-doc-num').value;
             let fType = document.getElementById('acc-type').value;
+            let fDetails = document.getElementById('acc-details').value.toLowerCase();
+            
+            let dateEnabled = document.getElementById('acc-date-enable').checked;
+            let fromDate = document.getElementById('acc-from-date').value;
+            let toDate = document.getElementById('acc-to-date').value;
 
             let results = accountingData.filter(a => {
                 if(fDoc && a.doc_number && !a.doc_number.toString().includes(fDoc)) return false;
                 if(fType && a.type !== fType) return false;
+                if(fDetails && a.details && !a.details.toLowerCase().includes(fDetails)) return false;
+                
+                if(dateEnabled && fromDate && toDate) {
+                    let fromTime = new Date(fromDate).getTime();
+                    let toTime = new Date(toDate).getTime() + 86399999;
+                    let accTime = a.date ? (a.date.seconds * 1000) : 0;
+                    if(accTime < fromTime || accTime > toTime) return false;
+                }
                 return true;
             });
 
@@ -240,11 +457,20 @@
                 let htmlStr = '';
                 results.forEach(a => {
                     let colorClass = a.type === "قبض" ? "text-green-700" : "text-red-600";
-                    htmlStr += '<div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200"><div class="flex justify-between items-center mb-2"><div class="font-bold ' + colorClass + '">سند ' + a.type + ' #' + a.doc_number + '</div><div class="font-black text-lg">' + a.amount + '</div></div><div class="text-gray-700 text-sm mb-1">' + (a.details||'') + '</div><div class="text-gray-400 text-xs">' + (a.date||'') + '</div></div>';
+                    let sDate = a.date ? new Date(a.date.seconds * 1000).toLocaleDateString('ar-EG') : 'غير محدد';
+                    htmlStr += `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="font-bold ${colorClass}">سند ${a.type} #${a.doc_number}</div>
+                            <div class="font-black text-lg">${a.amount} ريال</div>
+                        </div>
+                        <div class="text-gray-700 text-sm mb-1">${a.details||''}</div>
+                        <div class="text-gray-400 text-xs">${sDate}</div>
+                    </div>`;
                 });
                 container.innerHTML = htmlStr;
             } else {
-                container.innerHTML = '<div class="text-center text-gray-500 py-10">لا توجد سندات مطابقة</div>';
+                container.innerHTML = '<div class="text-center text-gray-500 py-10 font-bold">لا توجد سندات مطابقة</div>';
             }
         }
     </script>
