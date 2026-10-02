@@ -21,13 +21,13 @@
         <nav class="flex-1 px-4 py-6 space-y-2">
             <a href="dashboard.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">الرئيسية</a>
             <a href="orders.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الطلبات</a>
-            <a href="reports.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">التقارير والإحصائيات</a>
-            <a href="ads.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الإعلانات</a>
+            <a href="reports.html" id="nav-reports" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">التقارير والإحصائيات</a>
+            <a href="ads.html" id="nav-ads" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الإعلانات</a>
             <a href="trader.html" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">إدارة التجار</a>
-            <a href="clients.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">عملاء التطبيق</a>
+            <a href="clients.html" id="nav-clients" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">عملاء التطبيق</a>
         </nav>
         <div class="p-4 border-t border-gray-800">
-            <a href="index.html" class="block w-full bg-red-600 text-center hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">تسجيل الخروج</a>
+            <button id="logoutBtn" class="block w-full bg-red-600 text-center hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">تسجيل الخروج</button>
         </div>
     </aside>
 
@@ -123,19 +123,43 @@
 
         let tradersData = [];
         let traderToDeleteId = null;
+        let currentUserRole = "employee"; // متغير لتخزين صلاحية المستخدم
 
         window.onload = function() {
+            // التحقق المستمر من حالة المصادقة والجلسة
             firebase.auth().onAuthStateChanged(function(user) {
-                if (user) {
+                const userRole = sessionStorage.getItem('userRole');
+                
+                if (user && userRole) {
+                    currentUserRole = userRole;
+
+                    // إخفاء الروابط في القائمة الجانبية إذا كان موظف
+                    if (userRole === 'employee') {
+                        const adminOnlyElements = ['nav-ads', 'nav-clients'];
+                        adminOnlyElements.forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) el.style.display = 'none';
+                        });
+                    }
+
                     fetchTraders();
                 } else {
-                    window.location.href = "index.html";
+                    // إذا انتهت الجلسة أو الدخول عبر رابط مباشر
+                    sessionStorage.clear();
+                    window.location.replace("index.html");
                 }
             });
         };
 
+        // حدث زر تسجيل الخروج
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            firebase.auth().signOut().then(() => {
+                sessionStorage.clear();
+                window.location.replace("index.html");
+            });
+        });
+
         function fetchTraders() {
-            // التعديل هنا: جلب البيانات من جدول traders_management
             db.collection('traders_management').onSnapshot((snapshot) => {
                 tradersData = [];
                 snapshot.forEach((doc) => {
@@ -171,7 +195,12 @@
                 htmlStr += '</div><div class="flex gap-2 justify-end">';
                 htmlStr += '<button onclick="handleCallClick(\'' + trader.id + '\')" class="w-10 h-10 rounded-full bg-green-50 text-green-600 hover:bg-green-100 flex items-center justify-center transition-colors shadow-sm"><i class="fas fa-phone"></i></button>';
                 htmlStr += '<button onclick="openTraderModal(\'' + trader.id + '\')" class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors shadow-sm"><i class="fas fa-pen"></i></button>';
-                htmlStr += '<button onclick="openDeleteModal(\'' + trader.id + '\', \'' + trader.trader_name + '\')" class="w-10 h-10 rounded-full bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors shadow-sm"><i class="fas fa-trash"></i></button>';
+                
+                // إخفاء زر الحذف إذا كان المستخدم موظف (employee)
+                if (currentUserRole !== 'employee') {
+                    htmlStr += '<button onclick="openDeleteModal(\'' + trader.id + '\', \'' + trader.trader_name + '\')" class="w-10 h-10 rounded-full bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors shadow-sm"><i class="fas fa-trash"></i></button>';
+                }
+                
                 htmlStr += '</div></div>';
             }
 
@@ -223,11 +252,10 @@
                 location: document.getElementById('trader-location').value.trim(),
                 name: document.getElementById('trader-emp').value.trim(),
                 note: document.getElementById('trader-note').value.trim(),
-                updated_at: firebase.firestore.FieldValue.serverTimestamp() // تحديث الطابع الزمني
+                updated_at: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             if (id) {
-                // التعديل هنا: التحديث في جدول traders_management
                 db.collection('traders_management').doc(id).update(traderData).then(() => { 
                     closeModal('trader-modal'); 
                     showToast("تم التعديل بنجاح"); 
@@ -236,8 +264,7 @@
                     showToast("حدث خطأ أثناء التعديل", "error");
                 });
             } else {
-                traderData.created_at = firebase.firestore.FieldValue.serverTimestamp(); // إنشاء الطابع الزمني
-                // التعديل هنا: الإضافة في جدول traders_management
+                traderData.created_at = firebase.firestore.FieldValue.serverTimestamp();
                 db.collection('traders_management').add(traderData).then(() => { 
                     closeModal('trader-modal'); 
                     showToast("تم إضافة التاجر بنجاح"); 
@@ -257,7 +284,6 @@
         function executeDelete() {
             if (!traderToDeleteId) return;
             
-            // التعديل هنا: الحذف من جدول traders_management
             db.collection('traders_management').doc(traderToDeleteId).delete().then(() => {
                 closeModal('delete-modal');
                 showToast("تم الحذف بنجاح");
