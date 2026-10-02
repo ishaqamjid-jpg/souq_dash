@@ -86,14 +86,25 @@
                 </div>
 
                 <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">الوصول السريع</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- تم تغيير الشبكة إلى 4 أعمدة بدلاً من 3 لتتسع للزر الجديد -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <a href="orders.html" id="quick-orders" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-[#0D1B6D] transition-colors group flex items-center justify-between">
                         <div class="flex items-center gap-4">
                             <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors"><i class="fas fa-box-open text-xl"></i></div>
-                            <span class="font-bold text-gray-700 group-hover:text-[#0D1B6D] transition-colors">معالجة الطلبات الجديدة</span>
+                            <span class="font-bold text-gray-700 group-hover:text-[#0D1B6D] transition-colors">معالجة الطلبات</span>
                         </div>
                         <i class="fas fa-chevron-left text-gray-300 group-hover:text-blue-600 transition-colors"></i>
                     </a>
+                    
+                    <!-- الزر الجديد: إدارة التجار -->
+                    <a href="trader.html" id="quick-trader" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-orange-600 transition-colors group flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-orange-50 group-hover:text-orange-600 transition-colors"><i class="fas fa-store text-xl"></i></div>
+                            <span class="font-bold text-gray-700 group-hover:text-orange-700 transition-colors">إدارة التجار</span>
+                        </div>
+                        <i class="fas fa-chevron-left text-gray-300 group-hover:text-orange-600 transition-colors"></i>
+                    </a>
+
                     <a href="accounting.html" id="quick-accounting" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-green-600 transition-colors group flex items-center justify-between">
                         <div class="flex items-center gap-4">
                             <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-green-50 group-hover:text-green-600 transition-colors"><i class="fas fa-receipt text-xl"></i></div>
@@ -104,7 +115,7 @@
                     <a href="ads.html" id="quick-ads" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-pink-600 transition-colors group flex items-center justify-between">
                         <div class="flex items-center gap-4">
                             <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-pink-50 group-hover:text-pink-600 transition-colors"><i class="fas fa-bullhorn text-xl"></i></div>
-                            <span class="font-bold text-gray-700 group-hover:text-pink-700 transition-colors">إرسال إشعار للعملاء</span>
+                            <span class="font-bold text-gray-700 group-hover:text-pink-700 transition-colors">إرسال إشعار</span>
                         </div>
                         <i class="fas fa-chevron-left text-gray-300 group-hover:text-pink-600 transition-colors"></i>
                     </a>
@@ -152,11 +163,11 @@
 
                     // 2. التحكم في الصلاحيات بناءً على نوع المستخدم (employee)
                     if (userRole === 'employee') {
-                        // إخفاء كل الروابط غير المصرح بها
+                        // إخفاء كل الروابط غير المصرح بها (تمت إضافة quick-trader للوصول السريع)
                         const adminOnlyElements = [
                             'nav-ads', 'nav-trader', 'nav-clients', 'nav-constant', 
                             'nav-users', 'nav-quotations', 'nav-accounting', 'nav-setting',
-                            'quick-accounting', 'quick-ads'
+                            'quick-accounting', 'quick-ads', 'quick-trader'
                         ];
                         
                         adminOnlyElements.forEach(id => {
