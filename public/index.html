@@ -45,19 +45,19 @@
     <script type="module">
         // 1. استدعاء مكتبات Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // 2. إعدادات الربط 
         const firebaseConfig = {
-  apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg",
-  authDomain: "souqalghiyar.firebaseapp.com",
-  databaseURL: "https://souqalghiyar-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "souqalghiyar",
-  storageBucket: "souqalghiyar.firebasestorage.app",
-  messagingSenderId: "186585426069",
-  appId: "1:186585426069:web:9f34cedeee498d1bd3539c"
-};
+            apiKey: "AIzaSyA-ta3tPT5QYEPvnXTb8RBSidsnINY7akg",
+            authDomain: "souqalghiyar.firebaseapp.com",
+            databaseURL: "https://souqalghiyar-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "souqalghiyar",
+            storageBucket: "souqalghiyar.firebasestorage.app",
+            messagingSenderId: "186585426069",
+            appId: "1:186585426069:web:9f34cedeee498d1bd3539c"
+        };
 
         // 3. تهيئة Firebase
         const app = initializeApp(firebaseConfig);
@@ -69,25 +69,38 @@
         const loginBtn = document.getElementById('loginBtn');
         const errorMessage = document.getElementById('errorMessage');
 
+        // --- المراقبة التلقائية لحالة المستخدم (onAuthStateChanged) ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // إذا كان المستخدم مسجلاً للدخول (ولديه بيانات في sessionStorage)، وجهه للداش بورد
+                if(sessionStorage.getItem('userRole')) {
+                    window.location.replace("dashboard.html"); 
+                }
+            }
+        });
+
+
         // 5. حدث الضغط على زر الدخول
         loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); // منع تحديث الصفحة
+            e.preventDefault(); 
             
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
-            // تغيير حالة الزر أثناء التحميل
             loginBtn.textContent = "جاري التحقق...";
             loginBtn.disabled = true;
             errorMessage.classList.add('hidden');
 
             try {
+                // --- تحديد نوع الجلسة (تنتهي بإغلاق المتصفح) ---
+                await setPersistence(auth, browserSessionPersistence);
+
                 // الخطوة 1: تسجيل الدخول عبر Firebase Auth
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
                 if (user) {
-                    // الخطوة 2: البحث في جدول UserEmp عن الموظف وحالته
+                    // الخطوة 2: البحث في جدول UserEmp
                     const q = query(
                         collection(db, "UserEmp"), 
                         where("email", "==", email),
@@ -97,18 +110,18 @@
                     const querySnapshot = await getDocs(q);
 
                     if (!querySnapshot.empty) {
-                        // تم العثور على الموظف النشط
                         const doc = querySnapshot.docs[0];
                         const userData = doc.data();
-                        userData.user_id = doc.id; 
+                        
+                        // --- حفظ الصلاحيات والاسم في sessionStorage ---
+                        sessionStorage.setItem('userRole', userData.user_permissions);
+                        sessionStorage.setItem('displayName', userData.display_name);
+                        
+                        // (اختياري) حفظ وقت تسجيل الدخول لتتبع الجلسة
+                        sessionStorage.setItem('loginTime', new Date().getTime());
 
-                        // حفظ بيانات المستخدم في المتصفح لاستخدامها في الداش بورد
-                        localStorage.setItem('adminData', JSON.stringify(userData));
-
-                        // الانتقال إلى لوحة التحكم
                         window.location.href = "dashboard.html";
                     } else {
-                        // الموظف غير موجود في الجدول أو حسابه غير نشط
                         await signOut(auth);
                         showError("تم تسجيل الدخول لكن لا يوجد حساب موظف نشط بهذا الإيميل.");
                     }
@@ -117,17 +130,46 @@
                 console.error("فشل تسجيل الدخول:", error);
                 showError("فشل تسجيل الدخول. تأكد من البريد الإلكتروني وكلمة المرور.");
             } finally {
-                // إعادة الزر لحالته الطبيعية
                 loginBtn.textContent = "تسجيل الدخول";
                 loginBtn.disabled = false;
             }
         });
 
-        // دالة عرض رسائل الخطأ
         function showError(msg) {
             errorMessage.textContent = msg;
             errorMessage.classList.remove('hidden');
         }
+
+        /* 
+        // --- كود إضافي (اختياري) لإنهاء الجلسة بعد ساعة من آخر نشاط ---
+        // يمكنك وضع هذا الكود في ملف منفصل واستدعائه في جميع صفحات لوحة التحكم
+        
+        let timeout;
+        const ONE_HOUR = 60 * 60 * 1000; // ساعة بالملي ثانية
+
+        function resetTimer() {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                // تسجيل الخروج بعد مرور ساعة من الخمول
+                import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js").then(({ getAuth, signOut }) => {
+                    const auth = getAuth();
+                    signOut(auth).then(() => {
+                        sessionStorage.clear(); // مسح البيانات
+                        window.location.replace("index.html");
+                    });
+                });
+            }, ONE_HOUR);
+        }
+
+        // تتبع نشاط المستخدم لإعادة تعيين المؤقت
+        window.onload = resetTimer;
+        window.onmousemove = resetTimer;
+        window.onmousedown = resetTimer; 
+        window.ontouchstart = resetTimer;
+        window.onclick = resetTimer; 
+        window.onkeypress = resetTimer;
+        */
+
     </script>
 </body>
 </html>
