@@ -21,22 +21,25 @@
             Souq app
         </div>
         <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
-            <a href="dashboard.html" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">الرئيسية</a>
-            <a href="orders.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الطلبات</a>
-            <a href="reports.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">التقارير والإحصائيات</a>
-            <a href="ads.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الإعلانات</a>
-            <a href="trader.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة التجار</a>
-            <a href="clients.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">عملاء التطبيق</a>
-            <a href="constant.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الثوابت</a>
-            <a href="users.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">موظفو النظام</a>
-            <a href="quotations.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">فواتير سعر</a>
-            <a href="accounting.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">الحسابات والسندات</a>
-            <a href="setting.html" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium text-[#2196F3]"><i class="fas fa-cog ml-2"></i> الإعدادات</a>
+            <!-- تم إضافة IDs للتحكم بإخفائها حسب الصلاحية -->
+            <a href="dashboard.html" id="nav-home" class="block px-4 py-3 bg-blue-600 shadow-md rounded-lg transition-colors font-bold">الرئيسية</a>
+            <a href="orders.html" id="nav-orders" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الطلبات</a>
+            <a href="reports.html" id="nav-reports" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">التقارير والإحصائيات</a>
+            
+            <a href="ads.html" id="nav-ads" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الإعلانات</a>
+            <a href="trader.html" id="nav-trader" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة التجار</a>
+            <a href="clients.html" id="nav-clients" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">عملاء التطبيق</a>
+            <a href="constant.html" id="nav-constant" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">إدارة الثوابت</a>
+            <a href="users.html" id="nav-users" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">موظفو النظام</a>
+            <a href="quotations.html" id="nav-quotations" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">فواتير سعر</a>
+            <a href="accounting.html" id="nav-accounting" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium">الحسابات والسندات</a>
+            <a href="setting.html" id="nav-setting" class="block px-4 py-3 hover:bg-gray-800 rounded-lg transition-colors font-medium text-[#2196F3]"><i class="fas fa-cog ml-2"></i> الإعدادات</a>
         </nav>
         <div class="p-4 border-t border-gray-800">
-            <a href="index.html" class="block text-center w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">
+            <!-- تحويل تسجيل الخروج إلى زر ينفذ دالة الأمان -->
+            <button id="logoutBtn" class="block text-center w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition-colors shadow">
                 تسجيل الخروج
-            </a>
+            </button>
         </div>
     </aside>
 
@@ -47,8 +50,8 @@
                 <div class="text-sm font-bold text-gray-500" id="current-date">اليوم: متصل</div>
                 <div class="h-8 w-px bg-gray-200"></div>
                 <div class="text-sm font-semibold text-gray-600 flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold" id="admin-initial">M</div>
-                    <span id="admin-name">مدير النظام</span>
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold" id="admin-initial">-</div>
+                    <span id="admin-name">جاري التحميل...</span>
                 </div>
             </div>
         </header>
@@ -63,7 +66,7 @@
                     <div class="hidden md:block"><i class="fas fa-chart-line text-7xl opacity-20"></i></div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="stats-container">
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
                         <div class="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-2xl"><i class="fas fa-shopping-cart"></i></div>
                         <div><div class="text-sm text-gray-500 font-bold mb-1">الطلبات المعلقة</div><div class="text-2xl font-black text-gray-800" id="pending-orders-count">0</div></div>
@@ -84,21 +87,21 @@
 
                 <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">الوصول السريع</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <a href="orders.html" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-[#0D1B6D] transition-colors group flex items-center justify-between">
+                    <a href="orders.html" id="quick-orders" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-[#0D1B6D] transition-colors group flex items-center justify-between">
                         <div class="flex items-center gap-4">
                             <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors"><i class="fas fa-box-open text-xl"></i></div>
                             <span class="font-bold text-gray-700 group-hover:text-[#0D1B6D] transition-colors">معالجة الطلبات الجديدة</span>
                         </div>
                         <i class="fas fa-chevron-left text-gray-300 group-hover:text-blue-600 transition-colors"></i>
                     </a>
-                    <a href="accounting.html" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-green-600 transition-colors group flex items-center justify-between">
+                    <a href="accounting.html" id="quick-accounting" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-green-600 transition-colors group flex items-center justify-between">
                         <div class="flex items-center gap-4">
                             <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-green-50 group-hover:text-green-600 transition-colors"><i class="fas fa-receipt text-xl"></i></div>
                             <span class="font-bold text-gray-700 group-hover:text-green-700 transition-colors">إضافة سند مالي</span>
                         </div>
                         <i class="fas fa-chevron-left text-gray-300 group-hover:text-green-600 transition-colors"></i>
                     </a>
-                    <a href="ads.html" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-pink-600 transition-colors group flex items-center justify-between">
+                    <a href="ads.html" id="quick-ads" class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:border-pink-600 transition-colors group flex items-center justify-between">
                         <div class="flex items-center gap-4">
                             <div class="bg-gray-100 p-3 rounded-lg text-gray-600 group-hover:bg-pink-50 group-hover:text-pink-600 transition-colors"><i class="fas fa-bullhorn text-xl"></i></div>
                             <span class="font-bold text-gray-700 group-hover:text-pink-700 transition-colors">إرسال إشعار للعملاء</span>
@@ -110,9 +113,9 @@
         </main>
     </div>
 
-    <!-- استدعاء مكتبات فايربيس (تم إضافة Auth) -->
+    <!-- استدعاء مكتبات فايربيس -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> <!-- مكتبة المصادقة -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> 
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 
@@ -133,20 +136,41 @@
         const messaging = firebase.messaging();
 
         window.onload = function() {
-            // التعديل هنا: نغلف الكود داخل دالة التحقق من تسجيل الدخول
+            // التحقق المستمر من حالة المصادقة
             firebase.auth().onAuthStateChanged(function(user) {
-                if (user) {
-                    // المستخدم مسجل دخوله.. يمكننا الآن جلب البيانات بأمان
+                const userRole = sessionStorage.getItem('userRole');
+                const displayName = sessionStorage.getItem('displayName');
+
+                // إذا كان هناك مستخدم مسجل الدخول، ولديه بيانات في الجلسة
+                if (user && userRole) {
+                    
+                    // 1. تحديث اسم المستخدم في الواجهة
+                    if (displayName) {
+                        document.getElementById('admin-name').innerText = displayName;
+                        document.getElementById('admin-initial').innerText = displayName.charAt(0).toUpperCase();
+                    }
+
+                    // 2. التحكم في الصلاحيات بناءً على نوع المستخدم (employee)
+                    if (userRole === 'employee') {
+                        // إخفاء كل الروابط غير المصرح بها
+                        const adminOnlyElements = [
+                            'nav-ads', 'nav-trader', 'nav-clients', 'nav-constant', 
+                            'nav-users', 'nav-quotations', 'nav-accounting', 'nav-setting',
+                            'quick-accounting', 'quick-ads'
+                        ];
+                        
+                        adminOnlyElements.forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) el.style.display = 'none';
+                        });
+                    }
+
+                    // تحديث التاريخ
                     let options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
                     document.getElementById('current-date').innerText = "اليوم: " + new Date().toLocaleDateString('ar-EG', options);
 
-                    let adminData = JSON.parse(localStorage.getItem('adminData'));
-                    if(adminData && adminData.name) {
-                        document.getElementById('admin-name').innerText = adminData.name;
-                        document.getElementById('admin-initial').innerText = adminData.name.charAt(0).toUpperCase();
-                    }
-
-                    // جلب وتحديث الإحصائيات لحظياً
+                    // جلب الإحصائيات (يمكنك هنا أيضاً إضافة شرط if (userRole === 'admin') 
+                    // إذا كنت لا تريد للموظف أن يرى إجمالي العملاء والتجار)
                     db.collection("orders").onSnapshot(snapshot => {
                         let pending = 0, completed = 0;
                         snapshot.forEach(doc => {
@@ -166,15 +190,25 @@
                         document.getElementById('registered-traders-count').innerText = snapshot.size;
                     });
 
-                    // طلب إذن الإشعارات بعد تسجيل الدخول
                     requestNotificationPermission();
 
                 } else {
-                    // المستخدم غير مسجل دخوله (أو انتهت الجلسة)، اطرده لصفحة الدخول
-                    window.location.href = "index.html";
+                    // إذا انتهت الجلسة أو الدخول عبر رابط مباشر
+                    sessionStorage.clear();
+                    window.location.replace("index.html");
                 }
             });
         };
+
+        // حدث تسجيل الخروج
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            firebase.auth().signOut().then(() => {
+                sessionStorage.clear();
+                window.location.replace("index.html");
+            }).catch((error) => {
+                console.error("خطأ في تسجيل الخروج:", error);
+            });
+        });
 
         function requestNotificationPermission() {
             Notification.requestPermission().then((permission) => {
