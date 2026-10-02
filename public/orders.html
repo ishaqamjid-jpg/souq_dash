@@ -135,7 +135,7 @@ window.onload = function() {
                 });
             }
             
-            fetchTraders(); // جلب قائمة التجار
+            fetchTraders(); 
             fetchOrders();
             if(messaging) requestNotificationPermission();
         } else {
@@ -180,6 +180,8 @@ function fetchTraders() {
         });
         tradersList = tempTraders;
         if (ordersData.length > 0) renderOrders();
+    }, error => {
+        console.error("خطأ في جلب قائمة التجار:", error);
     });
 }
 
@@ -283,24 +285,32 @@ function renderOrders() {
             
             let purchaseField = isGoing ? '<td class="p-3"><input type="number" class="border border-gray-300 p-2 w-28 text-center rounded focus:border-blue-500 text-red-600" value="' + (item.purchase_price || '') + '" onchange="updateSubItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'purchase_price\', this.value)"></td>' : '';
             
-            // توليد خيارات التجار
+            // دمج قائمة التجار مع التاجر المسجل لضمان عدم اختفائه
+            let allTraders = [...tradersList];
+            if (s_trader && !allTraders.includes(s_trader)) {
+                allTraders.push(s_trader);
+            }
+
+            // توليد خيارات القائمة المنسدلة
             let traderOptions = '<option value="" disabled ' + (!s_trader ? 'selected' : '') + '>اختر التاجر</option>';
-            tradersList.forEach(t => {
-                let selected = (s_trader === t) ? 'selected' : '';
-                traderOptions += `<option value="${t}" ${selected}>${t}</option>`;
+            allTraders.forEach(t => {
+                let isSelected = (s_trader === t) ? 'selected' : '';
+                traderOptions += '<option value="' + safeStr(t) + '" ' + isSelected + '>' + safeStr(t) + '</option>';
             });
 
-            // حقل التاجر مع زر إضافة تاجر جديد
-            let traderField = `
-                <div class="flex items-center gap-2">
-                    <select class="border border-gray-300 p-2 rounded w-full focus:border-blue-500 min-w-[130px]" 
-                            onchange="updateSubItem('${order.order_id}', '${item.item_id}', 'trader_name', this.value)" 
-                            ${disabledAttr} required>
-                        ${traderOptions}
-                    </select>
-                    ${!disabledAttr ? `<a href="trader.html" target="_blank" title="إضافة تاجر جديد" class="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 rounded flex items-center justify-center w-[42px] h-[42px] shrink-0 transition"><i class="fas fa-plus"></i></a>` : ''}
-                </div>
-            `;
+            // زر إضافة تاجر (يظهر في حال كانت الخانات قابلة للتعديل)
+            let addTraderBtn = '';
+            if (isPending || isAdminApproval || isGoing) {
+                addTraderBtn = '<a href="trader.html" target="_blank" title="إضافة تاجر جديد" class="bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 rounded flex items-center justify-center w-[42px] h-[42px] shrink-0 transition"><i class="fas fa-plus"></i></a>';
+            }
+
+            // حقل التاجر بالكامل
+            let traderField = '<div class="flex items-center gap-2">' +
+                '<select class="border border-gray-300 p-2 rounded w-full focus:border-blue-500 min-w-[130px]" ' +
+                'onchange="updateSubItem(\'' + order.order_id + '\', \'' + item.item_id + '\', \'trader_name\', this.value)" ' + disabledAttr + '>' +
+                traderOptions +
+                '</select>' + addTraderBtn +
+            '</div>';
             
             let invoiceVal = isGoing ? safeStr(item.invoice_number) : safeStr(item.quotation_number);
             let invoiceFieldType = isGoing ? 'invoice_number' : 'quotation_number';
